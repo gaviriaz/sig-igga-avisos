@@ -205,8 +205,8 @@ const AvisoDetail: React.FC = () => {
                         key={tab.id}
                         onClick={() => setCurrentTab(tab.id as DetailTab)}
                         className={`py-4 text-sm font-semibold transition-all relative border-b-2 ${currentTab === tab.id
-                                ? 'text-indigo-400 border-indigo-400'
-                                : 'text-slate-400 border-transparent hover:text-slate-200'
+                            ? 'text-indigo-400 border-indigo-400'
+                            : 'text-slate-400 border-transparent hover:text-slate-200'
                             }`}
                     >
                         {tab.label}
@@ -446,12 +446,12 @@ const AvisoDetail: React.FC = () => {
                         {historial.length > 0 ? historial.map((h, i) => (
                             <div key={i} className="flex gap-4 p-4 bg-slate-800/30 rounded-2xl border border-slate-700/30">
                                 <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-slate-400 font-bold shrink-0">
-                                    {(h.usuario || 'A').substring(0, 2).toUpperCase()}
+                                    {(h.rol || 'A').substring(0, 2).toUpperCase()}
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-2 mb-1">
-                                        <span className="text-sm font-semibold text-slate-200">{h.usuario}</span>
-                                        <span className="text-xs text-slate-500">{h.created_at?.split('T')[0]}</span>
+                                        <span className="text-sm font-semibold text-slate-200">{h.rol || 'Sistema'}</span>
+                                        <span className="text-xs text-slate-500">{h.timestamp?.split('T')[0]}</span>
                                     </div>
                                     <p className="text-sm text-slate-400">Actualizó <span className="text-indigo-400 font-medium">{h.campo}</span></p>
                                     <div className="flex items-center gap-2 mt-2 text-xs bg-slate-900 px-3 py-2 rounded-lg inline-flex max-w-full overflow-hidden">

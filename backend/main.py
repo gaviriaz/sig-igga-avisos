@@ -549,8 +549,8 @@ def get_aviso_history(aviso_id: str, db: Session = Depends(get_db)):
     try:
         from database.models import AvisoHistorial
         rows = db.query(AvisoHistorial).filter(
-            AvisoHistorial.aviso_id == aviso_id
-        ).order_by(AvisoHistorial.created_at.desc()).all()
+            AvisoHistorial.aviso == aviso_id
+        ).order_by(AvisoHistorial.timestamp.desc()).all()
         return [row_to_dict(r) for r in rows]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

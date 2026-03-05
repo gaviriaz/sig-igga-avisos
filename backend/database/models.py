@@ -98,14 +98,16 @@ class Aviso(Base):
 
 class AvisoHistorial(Base):
     __tablename__ = 'aviso_historial'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    aviso_id = Column(String, ForeignKey('aviso.aviso'))
+    historial_id = Column(Integer, primary_key=True, autoincrement=True)
+    aviso = Column(String, ForeignKey('aviso.aviso'))
     campo = Column(String)
     valor_anterior = Column(Text)
     valor_nuevo = Column(Text)
+    usuario_id = Column(String)
+    rol = Column(String)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    comentario = Column(Text)
     batch_id = Column(String)
-    usuario = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
 
 class Dominio(Base):
     __tablename__ = 'dominio'
