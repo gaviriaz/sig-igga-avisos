@@ -12,7 +12,14 @@ def deploy_schema():
     conn.autocommit = True
     cur = conn.cursor()
     
-    scripts = ['database/schema.sql', 'database/senior_master_deploy.sql']
+    # Rutas relativas al script para mayor robustez
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    backend_dir = os.path.dirname(script_dir)
+    
+    scripts = [
+        os.path.join(backend_dir, 'database', 'schema.sql'),
+        os.path.join(backend_dir, 'database', 'senior_master_deploy.sql')
+    ]
     
     for script_path in scripts:
         print(f"📖 Reading {script_path}...")
