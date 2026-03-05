@@ -5,6 +5,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+    base: '/sig-igga-avisos/',
     plugins: [
         react(),
         VitePWA({

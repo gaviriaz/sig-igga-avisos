@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -8,7 +8,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 const App: React.FC = () => {
     return (
-        <BrowserRouter
+        <HashRouter
             future={{
                 v7_startTransition: true,
                 v7_relativeSplatPath: true,
@@ -33,7 +33,7 @@ const App: React.FC = () => {
                 {/* 🔄 Fallback */}
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
-        </BrowserRouter>
+        </HashRouter>
     );
 };
 
