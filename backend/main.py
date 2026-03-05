@@ -59,6 +59,16 @@ def get_db():
 
 #  ENDPOINTS 
 
+def row_to_dict(row):
+    """Convierte un objeto SQLAlchemy en un dict serializable JSON."""
+    d = {}
+    for c in row.__table__.columns:
+        val = getattr(row, c.name)
+        if hasattr(val, 'isoformat'):
+            val = val.isoformat()
+        d[c.name] = val
+    return d
+
 @app.get("/")
 def health_check():
     from database.models import Aviso
@@ -150,30 +160,47 @@ def seed_database(db: Session = Depends(get_db)):
 @app.get("/domains/{domain_key}")
 def list_domain_values(domain_key: str, db: Session = Depends(get_db)):
     from database.models import Dominio
-    return db.query(Dominio).filter(Dominio.tipo == domain_key).all()
+    try:
+        rows = db.query(Dominio).filter(Dominio.tipo == domain_key).all()
+        return [row_to_dict(r) for r in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/avisos")
 def list_avisos(db: Session = Depends(get_db)):
     from database.models import Aviso
-    return db.query(Aviso).all()
+    try:
+        rows = db.query(Aviso).all()
+        return [row_to_dict(r) for r in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/avisos/{aviso_id}")
 def get_aviso(aviso_id: str, db: Session = Depends(get_db)):
     from database.models import Aviso
-    aviso = db.query(Aviso).filter(Aviso.aviso == aviso_id).first()
-    if not aviso:
-        raise HTTPException(status_code=404, detail="Aviso no encontrado")
-    return aviso
+    try:
+        aviso = db.query(Aviso).filter(Aviso.aviso == aviso_id).first()
+        if not aviso:
+            raise HTTPException(status_code=404, detail="Aviso no encontrado")
+        return row_to_dict(aviso)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/avisos/{aviso_id}/comments")
 def get_aviso_comments(aviso_id: str, db: Session = Depends(get_db)):
     from database.models import AvisoComentario
-    return db.query(AvisoComentario).filter(
-        AvisoComentario.aviso_id == aviso_id
-    ).order_by(AvisoComentario.created_at).all()
+    try:
+        rows = db.query(AvisoComentario).filter(
+            AvisoComentario.aviso_id == aviso_id
+        ).order_by(AvisoComentario.created_at).all()
+        return [row_to_dict(r) for r in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/avisos/{aviso_id}/comments")
@@ -207,7 +234,11 @@ async def add_aviso_comment(aviso_id: str, request: Request, db: Session = Depen
 @app.get("/notifications")
 def get_notifications(db: Session = Depends(get_db)):
     from database.models import Notificacion
-    return db.query(Notificacion).order_by(Notificacion.created_at.desc()).limit(50).all()
+    try:
+        rows = db.query(Notificacion).order_by(Notificacion.created_at.desc()).limit(50).all()
+        return [row_to_dict(r) for r in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.patch("/notifications/{notif_id}/read")
@@ -223,32 +254,38 @@ def mark_notification_read(notif_id: int, db: Session = Depends(get_db)):
 @app.get("/preferences")
 def get_preferences(db: Session = Depends(get_db)):
     from database.models import UserPreference
-    pref = db.query(UserPreference).first()
-    if not pref:
-        pref = UserPreference(usuario="default", theme="dark", zen_mode=False, notificaciones_email=True)
-        db.add(pref)
-        db.commit()
-        db.refresh(pref)
-    return pref
+    try:
+        pref = db.query(UserPreference).first()
+        if not pref:
+            pref = UserPreference(usuario="default", theme="dark", zen_mode=False, notificaciones_email=True)
+            db.add(pref)
+            db.commit()
+            db.refresh(pref)
+        return row_to_dict(pref)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.patch("/preferences")
 async def update_preferences(request: Request, db: Session = Depends(get_db)):
     from database.models import UserPreference
-    payload = await request.json()
-    pref = db.query(UserPreference).first()
-    if not pref:
-        pref = UserPreference(usuario="default")
-        db.add(pref)
-    if "theme" in payload:
-        pref.theme = payload["theme"]
-    if "zen_mode" in payload:
-        pref.zen_mode = payload["zen_mode"]
-    if "notificaciones_email" in payload:
-        pref.notificaciones_email = payload["notificaciones_email"]
-    db.commit()
-    db.refresh(pref)
-    return pref
+    try:
+        payload = await request.json()
+        pref = db.query(UserPreference).first()
+        if not pref:
+            pref = UserPreference(usuario="default")
+            db.add(pref)
+        if "theme" in payload:
+            pref.theme = payload["theme"]
+        if "zen_mode" in payload:
+            pref.zen_mode = payload["zen_mode"]
+        if "notificaciones_email" in payload:
+            pref.notificaciones_email = payload["notificaciones_email"]
+        db.commit()
+        db.refresh(pref)
+        return row_to_dict(pref)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 #  ROLES DEL SISTEMA IGGA 
@@ -262,20 +299,23 @@ ALL_ROLES = sorted(WORKFLOW_ROLES | FIELD_ROLES | {"Administrador"})
 def list_users(db: Session = Depends(get_db)):
     """Retorna todos los usuarios del sistema con roles IGGA reales."""
     from database.models import SystemUser
-    users = db.query(SystemUser).filter(SystemUser.activo == True).order_by(SystemUser.full_name).all()
-    return [
-        {
-            "id": u.id,
-            "username": u.username,
-            "full_name": u.full_name,
-            "email": u.email,
-            "role": u.role,
-            "zona_ejecutora": u.zona_ejecutora,
-            "active": u.activo,
-            "can_edit_workflow": u.role in WORKFLOW_ROLES,
-        }
-        for u in users
-    ]
+    try:
+        users = db.query(SystemUser).filter(SystemUser.activo == True).order_by(SystemUser.full_name).all()
+        return [
+            {
+                "id": u.id,
+                "username": u.username,
+                "full_name": u.full_name,
+                "email": u.email,
+                "role": u.role,
+                "zona_ejecutora": u.zona_ejecutora,
+                "active": u.activo,
+                "can_edit_workflow": u.role in WORKFLOW_ROLES,
+            }
+            for u in users
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/users/roles")
