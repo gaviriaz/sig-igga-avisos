@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, X, Info, AlertTriangle, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
+import { API_URL } from '../config/api';
 
 interface Notificacion {
     id: number;
@@ -19,7 +20,7 @@ const NotificationCenter: React.FC<{ isOpen: boolean; onClose: () => void }> = (
     const fetchNotifications = async () => {
         setLoading(true);
         try {
-            const res = await fetch('http://localhost:8000/notifications');
+            const res = await fetch(`${API_URL}/notifications`);
             const data = await res.json();
             setNotifications(data);
         } catch (e) {
@@ -31,7 +32,7 @@ const NotificationCenter: React.FC<{ isOpen: boolean; onClose: () => void }> = (
 
     const markAsRead = async (id: number) => {
         try {
-            await fetch(`http://localhost:8000/notifications/${id}/read`, { method: 'PATCH' });
+            await fetch(`${API_URL}/notifications/${id}/read`, { method: 'PATCH' });
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, leida: true } : n));
         } catch (e) {
             console.error(e);
@@ -77,9 +78,9 @@ const NotificationCenter: React.FC<{ isOpen: boolean; onClose: () => void }> = (
                             >
                                 <div className="flex gap-4">
                                     <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${n.tipo === 'WARNING' ? 'bg-amber-500/10 text-amber-400' :
-                                            n.tipo === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-400' :
-                                                n.tipo === 'ERROR' ? 'bg-rose-500/10 text-rose-400' :
-                                                    'bg-indigo-500/10 text-indigo-400'
+                                        n.tipo === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-400' :
+                                            n.tipo === 'ERROR' ? 'bg-rose-500/10 text-rose-400' :
+                                                'bg-indigo-500/10 text-indigo-400'
                                         }`}>
                                         {n.tipo === 'WARNING' ? <AlertTriangle size={18} /> :
                                             n.tipo === 'SUCCESS' ? <CheckCircle2 size={18} /> :

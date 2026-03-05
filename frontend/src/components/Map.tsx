@@ -15,6 +15,7 @@ import Feature from 'ol/Feature';
 import Geometry from 'ol/geom/Geometry';
 import { useAvisoStore, Aviso } from '../store/useAvisoStore';
 import { useMapStore } from '../store/useMapStore';
+import { API_URL } from '../config/api';
 
 interface MapProps {
     onMapReady?: (map: OLMap) => void;
@@ -66,7 +67,7 @@ const Map: React.FC<MapProps> = ({ onMapReady }) => {
 
         try {
             console.log(`📡 Iniciando descarga diferida: ${layerKey}...`);
-            const resp = await fetch(`http://localhost:8000/capas/${filename}`);
+            const resp = await fetch(`${API_URL}/capas/${filename}`);
             if (resp.ok) {
                 const geojsonData = await resp.json();
                 const format = new GeoJSON();
@@ -122,7 +123,7 @@ const Map: React.FC<MapProps> = ({ onMapReady }) => {
     // 3. Sincronización de Avisos (Ordenada por Riesgo para que Críticos queden Arriba)
     useEffect(() => {
         avisosSource.current.clear();
-        
+
         // Función auxiliar para calcular prioridad de renderizado (Z-Index simulado)
         const getRiskPriority = (a: Aviso) => {
             const dist = typeof a.distancia_copa_fase === 'string' ? parseFloat(a.distancia_copa_fase) : a.distancia_copa_fase;

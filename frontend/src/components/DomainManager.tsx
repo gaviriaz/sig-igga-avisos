@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Database, Plus, Trash2, Save, ChevronRight, Loader2 } from 'lucide-react';
+import { API_URL } from '../config/api';
 
 const DomainManager: React.FC = () => {
     const [activeDomain, setActiveDomain] = useState('workflow_status');
@@ -14,7 +15,7 @@ const DomainManager: React.FC = () => {
     const fetchValues = async () => {
         setLoading(true);
         try {
-            const resp = await fetch(`http://localhost:8000/domains/${activeDomain}`);
+            const resp = await fetch(`${API_URL}/domains/${activeDomain}`);
             if (resp.ok) {
                 const data = await resp.json();
                 setValues(data);
@@ -36,7 +37,7 @@ const DomainManager: React.FC = () => {
         if (!val || !lab) return;
 
         try {
-            const resp = await fetch('http://localhost:8000/domains', {
+            const resp = await fetch(`${API_URL}/domains`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ domain_key: activeDomain, value: val, label: lab })
@@ -48,8 +49,6 @@ const DomainManager: React.FC = () => {
     };
 
     const handleUpdateLabel = async (id: number, newValue: string, newLabel: string) => {
-        // En una app real haríamos PATCH /domains/{id}
-        // Por ahora simulamos el éxito para mantener la fluidez UX
         alert(`Sincronizando ${newLabel}... (Función Senior Master en Proceso)`);
     };
 

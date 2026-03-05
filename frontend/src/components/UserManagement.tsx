@@ -1,5 +1,6 @@
 import React from 'react';
 import { Users, UserPlus, Shield, Mail, MoreHorizontal, Loader2 } from 'lucide-react';
+import { API_URL } from '../config/api';
 
 const UserManagement: React.FC = () => {
     const [users, setUsers] = React.useState<any[]>([]);
@@ -8,7 +9,7 @@ const UserManagement: React.FC = () => {
     React.useEffect(() => {
         const fetchUsers = async () => {
             try {
-                const resp = await fetch('http://localhost:8000/users/all');
+                const resp = await fetch(`${API_URL}/users/all`);
                 if (resp.ok) {
                     const data = await resp.json();
                     setUsers(data);

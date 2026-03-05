@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAvisoStore, Aviso } from '../store/useAvisoStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { API_URL } from '../config/api';
 import {
     Zap,
     ShieldCheck,
@@ -47,7 +48,7 @@ const AvisoDetail: React.FC = () => {
 
     useEffect(() => {
         // Cargar Catálogo de Estados (Senior Master Engine)
-        fetch('http://localhost:8000/domains/workflow_status')
+        fetch(`${API_URL}/domains/workflow_status`)
             .then(res => res.json())
             .then(data => setWorkflowStates(data))
             .catch(e => console.error("Error loading workflow states"));
@@ -60,14 +61,14 @@ const AvisoDetail: React.FC = () => {
         setCurrentTab('info');
 
         // Fetch AI Insight
-        fetch(`http://localhost:8000/avisos/${selectedAviso.aviso}/ai-insight`)
+        fetch(`${API_URL}/avisos/${selectedAviso.aviso}/ai-insight`)
             .then(res => res.json())
             .then(data => setAiInsight(data))
             .catch(e => console.error(e))
             .finally(() => setLoadingAi(false));
 
         // Fetch Historial Real
-        fetch(`http://localhost:8000/avisos/${selectedAviso.aviso}/history`)
+        fetch(`${API_URL}/avisos/${selectedAviso.aviso}/history`)
             .then(res => res.json())
             .then(data => setHistorial(data))
             .catch(e => console.error(e));
@@ -82,13 +83,13 @@ const AvisoDetail: React.FC = () => {
         if (!selectedAviso) return;
         setIsUpdating(true);
         try {
-            const res = await fetch(`http://localhost:8000/avisos/${selectedAviso.aviso}/state?new_state=${newState}`, {
+            const res = await fetch(`${API_URL}/avisos/${selectedAviso.aviso}/state?new_state=${newState}`, {
                 method: 'PATCH'
             });
             if (res.ok) {
                 updateAviso(selectedAviso.aviso, { estado_workflow_interno: newState });
                 // Refresh history
-                const hRes = await fetch(`http://localhost:8000/avisos/${selectedAviso.aviso}/history`);
+                const hRes = await fetch(`${API_URL}/avisos/${selectedAviso.aviso}/history`);
                 const hData = await hRes.json();
                 setHistorial(hData);
             }
@@ -102,7 +103,7 @@ const AvisoDetail: React.FC = () => {
     const fetchComments = async () => {
         if (!selectedAviso) return;
         try {
-            const res = await fetch(`http://localhost:8000/avisos/${selectedAviso.aviso}/comments`);
+            const res = await fetch(`${API_URL}/avisos/${selectedAviso.aviso}/comments`);
             const data = await res.json();
             setComments(data);
         } catch (e) {
@@ -126,7 +127,7 @@ const AvisoDetail: React.FC = () => {
         if (!newComment.trim() || !selectedAviso) return;
         setIsSending(true);
         try {
-            const res = await fetch(`http://localhost:8000/avisos/${selectedAviso.aviso}/comments`, {
+            const res = await fetch(`${API_URL}/avisos/${selectedAviso.aviso}/comments`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -149,7 +150,7 @@ const AvisoDetail: React.FC = () => {
         if (!selectedAviso) return;
         setValidating(true);
         try {
-            const res = await fetch(`http://localhost:8000/avisos/${selectedAviso.aviso}/validate-insumos`, {
+            const res = await fetch(`${API_URL}/avisos/${selectedAviso.aviso}/validate-insumos`, {
                 method: 'POST'
             });
             const data = await res.json();

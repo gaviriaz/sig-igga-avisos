@@ -6,7 +6,7 @@ load_dotenv()
 
 def deploy_schema():
     print("🚀 Connecting to Supabase via psycopg2...")
-    dsn = "postgresql://postgres:lP5LvF5dkFzIjvEU@db.vdzfamjklmwlptitxvvd.supabase.co:5432/postgres"
+    dsn = os.environ.get("DATABASE_URL", "postgresql://postgres:lP5LvF5dkFzIjvEU@db.vdzfamjklmwlptitxvvd.supabase.co:5432/postgres")
     
     conn = psycopg2.connect(dsn)
     conn.autocommit = True

@@ -28,21 +28,27 @@ app = FastAPI(title="SIG IGGA/ISA - Gestin Integral de Avisos v7.5")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:8000",
-    ],
+    allow_origins=os.environ.get("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000").split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Servir capas GeoJSON estticas
+#  DIRECTORIO BASE PARA RUTAS RELATIVAS 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Si estamos en /backend, subir un nivel para llegar a /capas
+ROOT_DIR = os.path.dirname(BASE_DIR)
+
+# Servir capas GeoJSON estticas (Ruta relativa)
+CAPAS_DIR = os.path.join(ROOT_DIR, "capas")
 try:
-    app.mount("/capas", StaticFiles(directory=r"C:\Users\AlbertG\IGGA.SAS\PERSONAL\DEV\SIG-IGGA-AVISOS\capas"), name="capas")
-except Exception:
-    pass
+    if os.path.exists(CAPAS_DIR):
+        app.mount("/capas", StaticFiles(directory=CAPAS_DIR), name="capas")
+        print(f"LOG: Sirviendo capas estticas desde {CAPAS_DIR}")
+    else:
+        print(f"WARN: El directorio de capas no existe en {CAPAS_DIR}")
+except Exception as e:
+    print(f"WARN: Error montando capas: {e}")
 
 def get_db():
     db = SessionLocal()
@@ -72,7 +78,8 @@ def seed_database(db: Session = Depends(get_db)):
     from services.ingesta_service import IngestaService
     from database.models import Dominio, Notificacion, Aviso
 
-    real_excel = r"C:\Users\AlbertG\IGGA.SAS\PERSONAL\DEV\SIG-IGGA-AVISOS\capas\GEAM_N2_27_02_2026.xlsx"
+    # Buscar el Excel en el directorio de capas (Ruta relativa)
+    real_excel = os.path.join(CAPAS_DIR, "GEAM_N2_27_02_2026.xlsx")
     use_real = os.path.exists(real_excel)
 
     # Seed dominios
