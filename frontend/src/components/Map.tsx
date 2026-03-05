@@ -6,7 +6,8 @@ import OSM from 'ol/source/OSM';
 import { fromLonLat } from 'ol/proj';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
-import { Style, Circle, Fill, Stroke } from 'ol/style';
+import Cluster from 'ol/source/Cluster';
+import { Style, Circle, Fill, Stroke, Text } from 'ol/style';
 import { GeoJSON } from 'ol/format';
 import proj4 from 'proj4';
 import { register } from 'ol/proj/proj4';
@@ -38,6 +39,11 @@ const Map: React.FC<MapProps> = ({ onMapReady }) => {
     const [loadedLayers, setLoadedLayers] = useState<Set<string>>(new Set());
 
     const avisosSource = useRef(new VectorSource());
+    const clusterSource = useRef(new Cluster({
+        distance: 40,
+        minDistance: 20,
+        source: avisosSource.current,
+    }));
     const infraSources = useRef<{ [key: string]: VectorSource }>({
         lineas: new VectorSource(),
         torres: new VectorSource(),
@@ -159,12 +165,33 @@ const Map: React.FC<MapProps> = ({ onMapReady }) => {
             servidumbre: new Style({ fill: new Fill({ color: 'rgba(52, 211, 153, 0.12)' }), stroke: new Stroke({ color: '#34d399', width: 0.8, lineDash: [4, 4] }) }),
             predios: new Style({ fill: new Fill({ color: 'rgba(59, 130, 246, 0.05)' }), stroke: new Stroke({ color: '#3b82f6', width: 0.4 }) }),
             avisos: (feature: any) => {
-                const a = feature.getProperties() as Aviso;
+                const size = feature.get('features').length;
+
+                if (size > 1) {
+                    // Estilo de Cluster (Agrupación)
+                    const radius = Math.max(12, Math.min(25, 10 + size * 0.5));
+                    return new Style({
+                        image: new Circle({
+                            radius: radius,
+                            fill: new Fill({ color: 'rgba(79, 70, 229, 0.8)' }), // Indigo-600 con transparencia
+                            stroke: new Stroke({ color: '#fff', width: 2 })
+                        }),
+                        text: new Text({
+                            text: size.toString(),
+                            fill: new Fill({ color: '#fff' }),
+                            font: 'bold 12px Outfit, sans-serif'
+                        })
+                    });
+                }
+
+                // Estilo individual (Punto único)
+                const originalFeature = feature.get('features')[0];
+                const a = originalFeature.getProperties() as Aviso;
                 let color = '#3b82f6'; // Default Blue
 
                 if (a.prioridad_operativa === 'CRITICO' || a.risk_score > 80) {
                     color = '#f43f5e'; // Rose (Crítico)
-                } else if ((a.distancia_copa_fase && a.distancia_copa_fase < 2.5) || a.risk_score > 60) {
+                } else if ((a.distancia_copa_fase && Number(a.distancia_copa_fase) < 2.5) || a.risk_score > 60) {
                     color = '#f59e0b'; // Amber (Alto Riesgo)
                 } else if (a.prioridad_operativa === 'MEDIA' || a.risk_score > 30) {
                     color = '#fbbf24'; // Yellow (Medio)
@@ -186,7 +213,8 @@ const Map: React.FC<MapProps> = ({ onMapReady }) => {
         layerRefs.current.torres = new VectorLayer({ source: infraSources.current.torres, style: styles.torres, visible: layersVisible.torres });
         layerRefs.current.servidumbre = new VectorLayer({ source: infraSources.current.servidumbre, style: styles.servidumbre, visible: layersVisible.servidumbre });
         layerRefs.current.predios = new VectorLayer({ source: infraSources.current.predios, style: styles.predios, visible: layersVisible.predios });
-        layerRefs.current.avisos = new VectorLayer({ source: avisosSource.current, style: styles.avisos, visible: layersVisible.avisos });
+        // USANDO EL CLUSTER SOURCE AQUÍ
+        layerRefs.current.avisos = new VectorLayer({ source: clusterSource.current, style: styles.avisos, visible: layersVisible.avisos });
 
         const map = new OLMap({
             target: mapElement.current,
@@ -196,14 +224,30 @@ const Map: React.FC<MapProps> = ({ onMapReady }) => {
 
         // 🏘️ Map Interactions: Click-to-Select (Senior Master)
         map.on('click', (evt) => {
-            const feature = map.forEachFeatureAtPixel(evt.pixel, (feat) => feat, {
+            const clusterFeature = map.forEachFeatureAtPixel(evt.pixel, (feat) => feat, {
                 layerFilter: (layer) => layer === layerRefs.current.avisos
             });
 
-            if (feature) {
-                const props = feature.getProperties();
-                console.log("📍 Aviso Seleccionado desde Mapa:", props.aviso);
-                useAvisoStore.getState().selectAviso(props as Aviso);
+            if (clusterFeature) {
+                const featuresInfo = clusterFeature.get('features');
+                // Si es un cluster (varios puntos), hacer zoom in
+                if (featuresInfo && featuresInfo.length > 1) {
+                    const view = map.getView();
+                    const currentZoom = view.getZoom();
+                    if (currentZoom) {
+                        view.animate({
+                            center: (clusterFeature.getGeometry() as any).getCoordinates(),
+                            zoom: currentZoom + 2,
+                            duration: 500
+                        });
+                    }
+                }
+                // Si es un solo punto, abrir detalle
+                else if (featuresInfo && featuresInfo.length === 1) {
+                    const props = featuresInfo[0].getProperties();
+                    console.log("📍 Aviso Seleccionado desde Mapa:", props.aviso);
+                    useAvisoStore.getState().selectAviso(props as Aviso);
+                }
             }
         });
 
