@@ -24,15 +24,37 @@ except Exception as e:
     print(f"WARN: Error creando tablas PostgreSQL: {e}")
 
 #  FASTAPI APP 
-app = FastAPI(title="SIG IGGA/ISA - Gestin Integral de Avisos v7.5")
+app = FastAPI(title="SIG IGGA/ISA - Gestion Integral de Avisos v7.5")
+
+ALLOWED = os.environ.get("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000").split(",")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.environ.get("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000").split(","),
+    allow_origins=ALLOWED,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Handler global: garantiza CORS headers incluso en errores 500
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
+    origin = request.headers.get("origin", "")
+    headers = {}
+    if origin in ALLOWED or "*" in ALLOWED:
+        headers["Access-Control-Allow-Origin"] = origin
+        headers["Access-Control-Allow-Credentials"] = "true"
+    print(f"GLOBAL ERROR: {traceback.format_exc()}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc), "type": type(exc).__name__},
+        headers=headers
+    )
 
 #  DIRECTORIO BASE PARA RUTAS RELATIVAS 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -68,6 +90,25 @@ def row_to_dict(row):
             val = val.isoformat()
         d[c.name] = val
     return d
+
+@app.get("/debug")
+def debug_info():
+    """Endpoint de diagnostico para produccion - muestra el estado del sistema."""
+    import sys
+    info = {
+        "python": sys.version,
+        "database_url_set": bool(os.environ.get("DATABASE_URL")),
+        "allowed_origins": ALLOWED,
+        "db_test": "not_run"
+    }
+    try:
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        db.close()
+        info["db_test"] = "ok"
+    except Exception as e:
+        info["db_test"] = f"FAILED: {str(e)}"
+    return info
 
 @app.get("/")
 def health_check():
