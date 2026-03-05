@@ -1,0 +1,141 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 226.3 70.3% 58.4%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Scrollbar Customization */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.3);
+}
+
+/* Premium Design Tokens & Utils */
+@layer components {
+  .glass {
+    @apply bg-slate-900/40 backdrop-blur-2xl border border-white/10 shadow-2xl;
+  }
+
+
+
+  .glass-indigo {
+    @apply bg-indigo-500/10 backdrop-blur-md border border-indigo-500/20 shadow-lg;
+  }
+
+  .glass-card {
+    @apply bg-white/[0.03] backdrop-blur-xl border border-white/10 shadow-xl;
+  }
+
+  .glass-panel {
+    @apply bg-slate-950/40 backdrop-blur-3xl border-x border-white/5;
+  }
+
+  .text-shine {
+    @apply bg-gradient-to-r from-white via-slate-400 to-white bg-[length:200%_auto] bg-clip-text text-transparent animate-gradient;
+  }
+
+  .input-premium {
+    @apply h-12 bg-white/5 border border-white/10 rounded-2xl px-5 outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all placeholder:text-slate-600;
+  }
+
+  .btn-premium {
+    @apply h-12 px-8 rounded-2xl font-bold transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
+  }
+}
+
+/* Base Overrides */
+body {
+  background: radial-gradient(circle at top left, #0f172a, #020617);
+  min-height: 100vh;
+}
+
+/* Senior Master Animations */
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient {
+  animation: gradient 5s ease infinite;
+}
+
+/* OL Map Overrides */
+.ol-zoom {
+  @apply top-6 left-6 border-none bg-slate-900/60 backdrop-blur-xl rounded-2xl overflow-hidden shadow-2xl transition-all hover:bg-slate-900/80 !important;
+}
+
+.ol-zoom button {
+  @apply bg-transparent hover:bg-indigo-500/20 text-indigo-400 font-bold h-12 w-12 flex items-center justify-center transition-all border-none focus:outline-none !important;
+}
+
+.ol-attribution {
+  @apply bg-slate-950/40 backdrop-blur-md rounded-tl-2xl border-l border-t border-white/5 !important;
+}
+
+.ol-attribution ul {
+  @apply text-slate-500 text-[9px] font-bold uppercase tracking-widest px-4 !important;
+}

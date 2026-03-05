@@ -1,0 +1,51 @@
+{
+    "TIPO_STATUS": [
+        "VALIDAR",
+        "GEAM",
+        "GPRE",
+        "PRER",
+        "TAMB",
+        "AMPO",
+        "AMPO/GPRE",
+        "AMPO/PRER",
+        "TAMB/GPRE",
+        "TAMB/AMPO",
+        "TAMB/PRER",
+        "GEAM/RSP",
+        "SCOR/GEAM"
+    ],
+    "ZONA_EJECUTORA": [
+        "CENTRO",
+        "NORTE",
+        "SUR",
+        "ORIENTE",
+        "ANTIOQUIA"
+    ],
+    "LEGALIZACION": [
+        "SI",
+        "NO",
+        "N/A",
+        "EN PROCESO"
+    ],
+    "TIPO_GESTION": [
+        "VEGETACION",
+        "CONSTRUCCION",
+        "RECURRENTE",
+        "CRUZAMIENTO"
+    ],
+    "ACTIVIDAD_PREDIAL": [
+        "CONTACTO",
+        "NEGOCIACION",
+        "VISITA",
+        "CIERRE",
+        "N/A"
+    ],
+    "CAR": [
+        "CORANTIOQUIA",
+        "CSB",
+        "CAR CUNDINAMARCA",
+        "CVS",
+        "CORPOGUAJIRA",
+        "N/A"
+    ]
+}

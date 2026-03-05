@@ -1,0 +1,1 @@
+import os, sys; from sqlalchemy import *; from sqlalchemy.orm import declarative_base; Base = declarative_base(); is_sqlite = True; engine = create_engine('sqlite:///./sig_igga_local_dev.db'); Base.metadata.drop_all(engine); print('Done dropping'); 
