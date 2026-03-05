@@ -144,7 +144,7 @@ const Home: React.FC = () => {
                     </div>
                 </div>
                 <div className="mt-20 text-center text-[10px] font-bold text-slate-700 uppercase tracking-[0.3em]">
-                    © 2026 IGGA SAS & ISA INTERCONEXIÓN ELÉCTRICA S.A.
+                    © 2026 DGZ Engineering | IGGA Platform. Proprietary technology. All rights reserved.
                 </div>
             </footer>
         </div>
