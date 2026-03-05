@@ -13,7 +13,16 @@ load_dotenv()
 #  DATABASE (PostgreSQL Supabase for Platinum Senior Master Deployment) 
 DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:lP5LvF5dkFzIjvEU@db.vdzfamjklmwlptitxvvd.supabase.co:5432/postgres")
 
-engine = create_engine(DATABASE_URL)
+# Configuración optimizada para PgBouncer (Supabase Pooler)
+# pool_pre_ping: verifica la conexión antes de usarla
+# pool_size + max_overflow: limita para plan gratuito (15 max connections)
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+    pool_size=2,
+    max_overflow=5,
+    pool_timeout=30,
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 from database.models import Base
