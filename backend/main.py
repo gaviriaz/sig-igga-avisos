@@ -427,62 +427,68 @@ async def update_user(user_id: int, request: Request, db: Session = Depends(get_
 
 @app.get("/avisos/{aviso_id}/ai-insight")
 def get_aviso_ai_insight(aviso_id: str, db: Session = Depends(get_db)):
-    """Genera un insight operativo determinstico basado en los datos del aviso."""
-    from database.models import Aviso
-    aviso = db.query(Aviso).filter(Aviso.aviso == aviso_id).first()
-    if not aviso:
-        raise HTTPException(status_code=404, detail="Aviso no encontrado")
+    """Genera un insight operativo determinístico basado en los datos del aviso."""
+    try:
+        from database.models import Aviso
+        aviso = db.query(Aviso).filter(Aviso.aviso == aviso_id).first()
+        if not aviso:
+            raise HTTPException(status_code=404, detail="Aviso no encontrado")
 
-    # Insight determinstico segn variables de riesgo (sin IA externa)
-    risk = aviso.risk_score or 0
-    tipo = (aviso.tipo_de_gestion or "").upper()
-    prio = (aviso.prioridad_fuente or "").upper()
-    dist = aviso.distancia_copa_fase
-    estado = aviso.estado_workflow_interno or "INGRESADO"
+        risk = aviso.risk_score or 0
+        tipo = (aviso.tipo_de_gestion or "").upper()
+        prio = (aviso.prioridad_fuente or "").upper()
+        dist_raw = aviso.distancia_copa_fase
+        estado = aviso.estado_workflow_interno or "INGRESADO"
 
-    # Construir resumen
-    if risk > 75:
-        summary = (
-            f"Aviso #{aviso_id} presenta riesgo CRTICO (score {risk}/100). "
-            f"Prioridad fuente: {prio}. Intervencin inmediata requerida."
-        )
-        recommendation = (
-            "Escalar a Coordinador de Zona. Programar visita de campo en las prximas 48h. "
-            "Verificar distancia fase-tierra in situ y actualizar insumos fotogrficos."
-        )
-    elif risk > 40:
-        summary = (
-            f"Aviso #{aviso_id} en gestin con riesgo MEDIO (score {risk}/100). "
-            f"Estado actual: {estado}. Tipo de gestin: {tipo or 'No definido'}."
-        )
-        recommendation = (
-            "Confirmar programacin con gestor predial. "
-            "Revisar disponibilidad de CAR si aplica control ambiental. "
-            "Actualizar estado en prxima visita semanal."
-        )
-    else:
-        summary = (
-            f"Aviso #{aviso_id} con riesgo BAJO (score {risk}/100). "
-            f"Municipio: {aviso.municipio or 'N/D'}. Estado: {estado}."
-        )
-        recommendation = (
-            "Mantener seguimiento peridico. "
-            "Verificar documentacin predial y compromisos vigentes. "
-            "Cerrar si gestin fue completada."
-        )
+        if risk > 75:
+            summary = (
+                f"Aviso #{aviso_id} presenta riesgo CRÍTICO (score {risk}/100). "
+                f"Prioridad fuente: {prio}. Intervención inmediata requerida."
+            )
+            recommendation = (
+                "Escalar a Coordinador de Zona. Programar visita de campo en las próximas 48h. "
+                "Verificar distancia fase-tierra in situ y actualizar insumos fotográficos."
+            )
+        elif risk > 40:
+            summary = (
+                f"Aviso #{aviso_id} en gestión con riesgo MEDIO (score {risk}/100). "
+                f"Estado actual: {estado}. Tipo de gestión: {tipo or 'No definido'}."
+            )
+            recommendation = (
+                "Confirmar programación con gestor predial. "
+                "Revisar disponibilidad de CAR si aplica control ambiental. "
+                "Actualizar estado en próxima visita semanal."
+            )
+        else:
+            summary = (
+                f"Aviso #{aviso_id} con riesgo BAJO (score {risk}/100). "
+                f"Municipio: {aviso.municipio or 'N/D'}. Estado: {estado}."
+            )
+            recommendation = (
+                "Mantener seguimiento periódico. "
+                "Verificar documentación predial y compromisos vigentes. "
+                "Cerrar si gestión fue completada."
+            )
 
-    # Detalle adicional para vegetacin
-    if "VEGETA" in tipo and dist is not None:
-        recommendation += f" Distancia copa-fase registrada: {dist}m  {' Peligrosa (<2.5m)' if dist < 2.5 else ' Dentro de margen'}."
+        if "VEGETA" in tipo and dist_raw is not None:
+            try:
+                dist = float(dist_raw)
+                recommendation += f" Distancia copa-fase registrada: {dist}m  {' -> Peligrosa (<2.5m)' if dist < 2.5 else ' -> Dentro de margen'}."
+            except ValueError:
+                pass
 
-    return {
-        "aviso_id": aviso_id,
-        "risk_score": risk,
-        "summary": summary,
-        "recommendation": recommendation,
-        "estado_actual": estado,
-        "tipo_gestion": tipo,
-    }
+        return {
+            "aviso_id": aviso_id,
+            "risk_score": risk,
+            "summary": summary,
+            "recommendation": recommendation,
+            "estado_actual": estado,
+            "tipo_gestion": tipo,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.patch("/avisos/{aviso_id}/state")
@@ -540,10 +546,14 @@ def validate_aviso_insumos(aviso_id: str, db: Session = Depends(get_db)):
 
 @app.get("/avisos/{aviso_id}/history")
 def get_aviso_history(aviso_id: str, db: Session = Depends(get_db)):
-    from database.models import AvisoHistorial
-    return db.query(AvisoHistorial).filter(
-        AvisoHistorial.aviso_id == aviso_id
-    ).order_by(AvisoHistorial.created_at.desc()).all()
+    try:
+        from database.models import AvisoHistorial
+        rows = db.query(AvisoHistorial).filter(
+            AvisoHistorial.aviso_id == aviso_id
+        ).order_by(AvisoHistorial.created_at.desc()).all()
+        return [row_to_dict(r) for r in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 #  ETL & CORTE AUTOMTICO 
