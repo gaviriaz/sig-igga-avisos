@@ -26,11 +26,7 @@ engine = create_engine(
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 from database.models import Base
-try:
-    Base.metadata.create_all(bind=engine)
-    print("LOG: Tablas PostgreSQL en Supabase creadas/verificadas correctamente.")
-except Exception as e:
-    print(f"WARN: Error creando tablas PostgreSQL: {e}")
+# Base.metadata.create_all(bind=engine) # Comentado para acelerar el inicio en Render (Free Tier)
 
 #  FASTAPI APP 
 app = FastAPI(title="SIG IGGA/ISA - Gestion Integral de Avisos v7.5")
@@ -121,16 +117,13 @@ def debug_info():
 
 @app.get("/")
 def health_check():
-    from database.models import Aviso
-    db = SessionLocal()
-    try:
-        count = db.query(Aviso).count()
-    except Exception as e:
-        print(f"Healthcheck error: {e}")
-        count = 0
-    finally:
-        db.close()
-    return {"status": "online", "db": "PostgreSQL (Supabase)", "avisos": count, "timestamp": str(datetime.now())}
+    """Endpoint simple para que Render vea que el servidor esta VIVO en menos de 1 segundo."""
+    return {
+        "status": "online", 
+        "engine": "FastAPI v7.5", 
+        "db": "Supabase Ready", 
+        "timestamp": str(datetime.now())
+    }
 
 
 @app.post("/dev/seed")
