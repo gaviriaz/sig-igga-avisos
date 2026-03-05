@@ -1,40 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { useAvisoStore, Aviso } from '../store/useAvisoStore';
+import { useAvisoStore } from '../store/useAvisoStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { API_URL } from '../config/api';
 import {
-    Zap,
-    ShieldCheck,
-    FileText,
-    MapPin,
-    ChevronRight,
-    Loader2,
-    AlertTriangle,
-    CheckCircle2,
-    Clock,
-    FolderKanban,
-    Sparkles,
-    History,
-    Info,
-    FileCheck,
-    ExternalLink,
-    AlertCircle,
-    Plus,
-    TreeDeciduous,
-    HardHat,
-    Home,
-    SearchCode,
-    ChevronDown,
-    MessageSquare,
-    Send
+    Zap, MapPin, Loader2, AlertTriangle, CheckCircle2, Clock,
+    FolderKanban, Sparkles, History, Info, MessageSquare, Send,
+    ChevronRight, TreeDeciduous, Home, HardHat, ChevronDown,
+    FileText, User, Tag
 } from 'lucide-react';
 
-type DetailTab = 'info' | 'tecnico' | 'insumos' | 'history' | 'chat';
+type DetailTab = 'resumen' | 'tecnico' | 'comunicacion' | 'archivos' | 'auditoria';
 
 const AvisoDetail: React.FC = () => {
     const { selectedAviso, updateAviso } = useAvisoStore();
     const { profile } = useAuthStore();
-    const [currentTab, setCurrentTab] = useState<DetailTab>('info');
+    const [currentTab, setCurrentTab] = useState<DetailTab>('resumen');
+
+    // States
     const [validating, setValidating] = useState(false);
     const [valResult, setValResult] = useState<any>(null);
     const [aiInsight, setAiInsight] = useState<any>(null);
@@ -47,7 +29,6 @@ const AvisoDetail: React.FC = () => {
     const [isSending, setIsSending] = useState(false);
 
     useEffect(() => {
-        // Cargar Catálogo de Estados (Senior Master Engine)
         fetch(`${API_URL}/domains/workflow_status`)
             .then(res => res.json())
             .then(data => setWorkflowStates(data))
@@ -58,25 +39,20 @@ const AvisoDetail: React.FC = () => {
         if (!selectedAviso) return;
         setAiInsight(null);
         setLoadingAi(true);
-        setCurrentTab('info');
+        setCurrentTab('resumen');
 
-        // Fetch AI Insight
         fetch(`${API_URL}/avisos/${selectedAviso.aviso}/ai-insight`)
             .then(res => res.json())
             .then(data => setAiInsight(data))
             .catch(e => console.error(e))
             .finally(() => setLoadingAi(false));
 
-        // Fetch Historial Real
         fetch(`${API_URL}/avisos/${selectedAviso.aviso}/history`)
             .then(res => res.json())
             .then(data => setHistorial(data))
             .catch(e => console.error(e));
 
-        // Fetch Comunicaciones
         fetchComments();
-
-        setValResult(null);
     }, [selectedAviso]);
 
     const handleStatusChange = async (newState: string) => {
@@ -87,8 +63,7 @@ const AvisoDetail: React.FC = () => {
                 method: 'PATCH'
             });
             if (res.ok) {
-                updateAviso(selectedAviso.aviso, { estado_workflow_interno: newState });
-                // Refresh history
+                updateAviso(selectedAviso.aviso, { estado_workflow_interno: newState, tipo_status: newState });
                 const hRes = await fetch(`${API_URL}/avisos/${selectedAviso.aviso}/history`);
                 const hData = await hRes.json();
                 setHistorial(hData);
@@ -111,17 +86,13 @@ const AvisoDetail: React.FC = () => {
         }
     };
 
-    // Real-time Simulativo Polling (Solo activo si están en 'chat')
     useEffect(() => {
         let interval: NodeJS.Timeout;
-        if (selectedAviso && currentTab === 'chat') {
+        if (selectedAviso && currentTab === 'comunicacion') {
             interval = setInterval(fetchComments, 3000);
         }
-        return () => {
-            if (interval) clearInterval(interval);
-        }
+        return () => { if (interval) clearInterval(interval); }
     }, [selectedAviso, currentTab]);
-
 
     const handlePostComment = async () => {
         if (!newComment.trim() || !selectedAviso) return;
@@ -150,9 +121,7 @@ const AvisoDetail: React.FC = () => {
         if (!selectedAviso) return;
         setValidating(true);
         try {
-            const res = await fetch(`${API_URL}/avisos/${selectedAviso.aviso}/validate-insumos`, {
-                method: 'POST'
-            });
+            const res = await fetch(`${API_URL}/avisos/${selectedAviso.aviso}/validate-insumos`, { method: 'POST' });
             const data = await res.json();
             setValResult(data);
         } catch (e) {
@@ -164,358 +133,240 @@ const AvisoDetail: React.FC = () => {
 
     if (!selectedAviso) {
         return (
-            <div className="flex-1 flex flex-col items-center justify-center p-12 text-center gap-6">
-                <div className="w-20 h-20 bg-white/5 rounded-[2rem] flex items-center justify-center border border-dashed border-white/10 text-slate-700">
-                    <Zap size={32} />
+            <div className="flex-1 flex flex-col items-center justify-center p-12 bg-slate-900/50 h-full">
+                <div className="w-24 h-24 bg-slate-800/80 rounded-full flex items-center justify-center shadow-inner mb-6">
+                    <Zap size={36} className="text-slate-500" />
                 </div>
-                <div>
-                    <h3 className="text-xs font-black text-slate-500 uppercase tracking-[0.3em] mb-2">Selección Pendiente</h3>
-                    <p className="text-sm text-slate-600 max-w-[200px] leading-relaxed">Active un aviso desde el panel lateral para iniciar la gestión operativa.</p>
-                </div>
+                <h3 className="text-lg font-semibold text-slate-300 mb-2">Ningún Aviso Seleccionado</h3>
+                <p className="text-sm text-slate-500 max-w-xs text-center">Seleccione un aviso desde el panel de operaciones a la izquierda para ver su detalle.</p>
             </div>
         );
     }
 
     const isReadOnly = !['Oficina', 'Analista Ambiental', 'Coordinador Predial Senior'].includes(profile?.role || '');
 
+    // Helpers
+    const isCritico = selectedAviso.risk_score > 75;
+    const isMedio = selectedAviso.risk_score > 40 && selectedAviso.risk_score <= 75;
+
     return (
-        <div className="flex-1 overflow-hidden flex flex-col animate-in fade-in slide-in-from-right-8 duration-500 bg-[#0a0f1d]/40">
-            {/* 💎 Header Section */}
-            <header className="p-8 border-b border-white/5 bg-gradient-to-br from-indigo-500/5 via-transparent to-transparent relative overflow-hidden shrink-0">
-                <div className="absolute top-0 right-0 p-4 opacity-[0.03]">
-                    <Zap size={140} className="text-indigo-500" />
-                </div>
-
-                <div className="flex items-center justify-between mb-6 relative z-10">
-                    <div className="flex items-center gap-2">
-                        <span className="px-3 py-1 bg-indigo-600 rounded-lg text-[10px] font-black italic shadow-lg shadow-indigo-600/30 text-white">
-                            AVISO #{selectedAviso.aviso}
+        <div className="flex-1 overflow-hidden flex flex-col bg-[#0F172A] text-slate-200">
+            {/* 💎 Header Ejecutivo */}
+            <header className="px-8 pt-8 pb-6 bg-slate-900/80 border-b border-slate-800 shrink-0 shadow-sm relative">
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                        <span className="px-4 py-1.5 bg-indigo-500/10 text-indigo-400 rounded-full text-sm font-semibold border border-indigo-500/20">
+                            #{selectedAviso.aviso}
                         </span>
-                        <div className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${selectedAviso.risk_score > 75 ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' :
-                            selectedAviso.risk_score > 40 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-                                'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                            }`}>
-                            RIESGO {selectedAviso.risk_score > 75 ? 'CRÍTICO' : selectedAviso.risk_score > 40 ? 'MEDIO' : 'BAJO'}
-                        </div>
+                        {isCritico ? (
+                            <span className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 text-rose-400 rounded-full text-xs font-bold border border-rose-500/20">
+                                <AlertTriangle size={14} /> Riesgo Crítico
+                            </span>
+                        ) : isMedio ? (
+                            <span className="px-3 py-1.5 bg-amber-500/10 text-amber-400 rounded-full text-xs font-bold border border-amber-500/20">
+                                Riesgo Medio
+                            </span>
+                        ) : (
+                            <span className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 rounded-full text-xs font-bold border border-emerald-500/20">
+                                Riesgo Bajo
+                            </span>
+                        )}
                     </div>
-                    <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse mr-2" />
-                        <span className="text-[9px] font-black text-emerald-500 uppercase tracking-[0.2em] italic">Snapshot Activo</span>
+                    {/* Status animado suave */}
+                    <div className="flex items-center gap-2">
+                        <span className="relative flex h-2.5 w-2.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                        </span>
+                        <span className="text-xs text-slate-400 font-medium">Online</span>
                     </div>
                 </div>
 
-                <h3 className="text-2xl font-black text-white mb-2 leading-tight tracking-tighter uppercase max-w-[90%]">
-                    {selectedAviso.denominacion || 'Identidad en Proceso'}
-                </h3>
-                <div className="flex items-center gap-4 text-xs font-bold text-slate-500 mb-6">
-                    <span className="flex items-center gap-1.5"><MapPin size={12} className="text-indigo-400" /> {selectedAviso.municipio || 'Sector Desconocido'}</span>
-                    <span className="w-1 h-1 bg-slate-700 rounded-full" />
-                    <span className="flex items-center gap-1.5"><History size={12} className="text-amber-400" /> {selectedAviso.status_usuario || 'ABIE'}</span>
-                </div>
-
-                {/* 🚀 Progression Stepper (Senior Master) */}
-                <div className="flex items-center gap-2 px-1">
-                    {[
-                        { id: 'INGRESADO', label: 'Registro' },
-                        { id: 'EN_GESTION', label: 'Campo' },
-                        { id: 'VALIDAR_QA', label: 'QA' },
-                        { id: 'APROBADO', label: 'Aprobado' }
-                    ].map((step, idx, arr) => {
-                        const isCurrent = (selectedAviso.estado_workflow_interno || 'INGRESADO').includes(step.id);
-                        const isPast = arr.findIndex(s => (selectedAviso.estado_workflow_interno || 'INGRESADO').includes(s.id)) > idx;
-
-                        return (
-                            <React.Fragment key={step.id}>
-                                <div className="flex flex-col items-center gap-1.5">
-                                    <div className={`w-3 h-3 rounded-full border-2 transition-all duration-700 ${isCurrent ? 'bg-indigo-500 border-indigo-400 shadow-[0_0_10px_rgba(99,102,241,1)] scale-125' : isPast ? 'bg-emerald-500 border-emerald-400' : 'bg-slate-800 border-white/10'}`} />
-                                    <span className={`text-[7px] font-black uppercase tracking-tighter ${isCurrent ? 'text-white' : 'text-slate-600'}`}>{step.label}</span>
-                                </div>
-                                {idx < arr.length - 1 && (
-                                    <div className={`flex-1 h-px transition-all duration-1000 ${isPast ? 'bg-emerald-500/50' : 'bg-white/5'}`} />
-                                )}
-                            </React.Fragment>
-                        );
-                    })}
+                <h2 className="text-2xl font-bold text-white mb-2 leading-tight">
+                    {selectedAviso.denominacion || 'Identidad de Aviso Pendiente'}
+                </h2>
+                <div className="flex flex-wrap items-center gap-4 text-sm text-slate-400">
+                    <span className="flex items-center gap-1.5"><MapPin size={16} className="text-indigo-400" /> {selectedAviso.municipio || 'Sector Desconocido'}</span>
+                    <span className="w-1 h-1 bg-slate-600 rounded-full" />
+                    <span className="flex items-center gap-1.5"><Tag size={16} /> {selectedAviso.tipo_de_gestion || 'Gestión Standard'}</span>
                 </div>
             </header>
 
-            {/* 📑 Tab Navigation */}
-            <nav className="flex items-center border-b border-white/5 bg-slate-900/20 shrink-0">
+            {/* 📑 Pestañas Limpias (Clean Tabs) */}
+            <div className="flex items-center px-8 border-b border-slate-800 bg-slate-900 shrink-0 gap-6">
                 {[
-                    { id: 'info', label: 'Info', icon: Info },
-                    { id: 'chat', label: 'Comunicación', icon: MessageSquare },
-                    { id: 'tecnico', label: 'Campo', icon: TreeDeciduous },
-                    { id: 'insumos', label: 'Insumos', icon: FolderKanban },
-                    { id: 'history', label: 'Auditoría', icon: History }
+                    { id: 'resumen', label: 'Resumen' },
+                    { id: 'tecnico', label: 'Datos Técnicos' },
+                    { id: 'comunicacion', label: 'Comunicaciones' },
+                    { id: 'archivos', label: 'Archivos' },
+                    { id: 'auditoria', label: 'Auditoría' }
                 ].map(tab => (
                     <button
                         key={tab.id}
                         onClick={() => setCurrentTab(tab.id as DetailTab)}
-                        className={`flex-1 h-12 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all relative ${currentTab === tab.id ? 'text-indigo-400 bg-white/[0.02]' : 'text-slate-500 hover:text-white hover:bg-white/[0.01]'
+                        className={`py-4 text-sm font-semibold transition-all relative border-b-2 ${currentTab === tab.id
+                                ? 'text-indigo-400 border-indigo-400'
+                                : 'text-slate-400 border-transparent hover:text-slate-200'
                             }`}
                     >
-                        <tab.icon size={13} />
                         {tab.label}
-                        {currentTab === tab.id && (
-                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]" />
-                        )}
                     </button>
                 ))}
-            </nav>
+            </div>
 
-            {/* ⚙️ Scrollable Content Body */}
-            <div className="flex-1 overflow-y-auto p-8 space-y-10 scrollbar-thin scrollbar-thumb-white/5">
+            {/* ⚙️ Body */}
+            <div className="flex-1 overflow-y-auto p-8 space-y-6 scrollbar-thin scrollbar-thumb-slate-700">
 
-                {currentTab === 'info' && (
-                    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        {/* 🧠 AI Intelligence Section */}
-                        <section className="p-6 bg-gradient-to-br from-indigo-600/10 via-slate-900/60 to-transparent border border-indigo-500/20 rounded-[2.5rem] shadow-2xl relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 p-4 pointer-events-none opacity-20">
-                                <Sparkles size={40} className="text-indigo-400" />
-                            </div>
-                            <div className="flex items-center gap-2 mb-4">
-                                <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-ping" />
-                                <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">Operational Insight</h4>
+                {/* 1. RESUMEN TAB */}
+                {currentTab === 'resumen' && (
+                    <div className="space-y-6 animate-in fade-in duration-300">
+
+                        {/* Tarjeta de IA Soft */}
+                        <div className="p-6 bg-indigo-500/5 border border-indigo-500/10 rounded-2xl relative">
+                            <div className="flex items-center gap-2 mb-3">
+                                <Sparkles size={18} className="text-indigo-400" />
+                                <h3 className="text-sm font-semibold text-indigo-300">Resumen Inteligente</h3>
                             </div>
                             {loadingAi ? (
-                                <div className="space-y-2 animate-pulse">
-                                    <div className="h-4 bg-white/5 rounded-full w-3/4" />
-                                    <div className="h-4 bg-white/5 rounded-full w-1/2" />
+                                <div className="space-y-3 animate-pulse opacity-50">
+                                    <div className="h-2 bg-slate-600 rounded w-full" />
+                                    <div className="h-2 bg-slate-600 rounded w-2/3" />
                                 </div>
                             ) : (
-                                <div>
-                                    <p className="text-sm font-bold text-white leading-relaxed mb-4 italic">"{aiInsight?.summary || 'Analizando variables de riesgo...'}"</p>
-                                    <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-[10px] font-medium text-slate-400">
-                                        <span className="text-indigo-400 font-black block mb-1">RECOMENDACIÓN TÉCNICA:</span>
-                                        {aiInsight?.recommendation || 'Evaluar distancia fase-tierra en sitio.'}
+                                <div className="space-y-4">
+                                    <p className="text-slate-300 text-sm leading-relaxed">{aiInsight?.summary}</p>
+                                    <div className="p-4 bg-slate-900/50 rounded-xl text-sm text-slate-300 border border-slate-800">
+                                        <span className="text-indigo-400 font-semibold block mb-1">Recomendación:</span>
+                                        {aiInsight?.recommendation}
                                     </div>
                                 </div>
                             )}
-                        </section>
+                        </div>
 
-                        {/* 🔄 Workflow Status Selector (Senior Master) */}
-                        <section className="p-8 bg-slate-900 border border-white/10 rounded-[2.5rem] shadow-inner">
-                            <div className="flex items-center justify-between mb-6">
-                                <div>
-                                    <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Estado de Gestión Interna</h4>
-                                    <p className="text-sm font-black text-white italic tracking-tight">{selectedAviso.estado_workflow_interno || 'INGRESADO'}</p>
-                                </div>
-                                <div className={`p-3 rounded-2xl ${(selectedAviso.estado_workflow_interno || '').includes('Aprobado') ? 'bg-emerald-500/10 text-emerald-400' : 'bg-indigo-500/10 text-indigo-400'}`}>
-                                    {(selectedAviso.estado_workflow_interno || '').includes('Aprobado') ? <CheckCircle2 size={24} /> : <Clock size={24} />}
-                                </div>
-                            </div>
+                        {/* Estado Workflow */}
+                        <div className="p-6 bg-slate-800/50 rounded-2xl border border-slate-700/50">
+                            <h3 className="text-sm font-semibold text-slate-400 mb-4">Estado Operativo</h3>
+                            <div className="flex items-center justify-between mb-4">
+                                <p className="text-xl font-bold text-white">{selectedAviso.estado_workflow_interno || 'INGRESADO'}</p>
 
-                            {!isReadOnly && (
-                                <div className="grid grid-cols-1 gap-2">
-                                    <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest ml-1">Cambiar Estado Operativo</label>
-                                    <div className="relative group">
+                                {!isReadOnly && (
+                                    <div className="relative w-48">
                                         <select
                                             disabled={isUpdating}
                                             value={selectedAviso.tipo_status || 'VALIDAR'}
                                             onChange={(e) => handleStatusChange(e.target.value)}
-                                            className="w-full h-12 bg-white/5 border border-white/10 rounded-xl px-4 text-xs font-bold text-slate-300 appearance-none outline-none focus:border-indigo-500/50 focus:bg-indigo-500/5 transition-all cursor-pointer disabled:opacity-50"
+                                            className="w-full h-10 bg-slate-900 border border-slate-700 rounded-lg px-3 text-sm text-slate-300 appearance-none outline-none focus:border-indigo-500 transition-colors cursor-pointer"
                                         >
-                                            {/* Domains specifically required */}
-                                            {["VALIDAR", "GEAM", "GPRE", "PRER", "TAMB", "AMPO", "AMPO/GPRE", "AMPO/PRER", "TAMB/GPRE", "TAMB/AMPO", "TAMB/PRER", "GEAM/RSP", "SCOR/GEAM"].map((s, i) => (
+                                            {["VALIDAR", "GEAM", "GPRE", "PRER", "TAMB", "AMPO", "APROBADO", "CERRADO"].map((s, i) => (
                                                 <option key={i} value={s}>{s}</option>
                                             ))}
                                         </select>
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-600 group-hover:text-indigo-400 transition-colors">
-                                            {isUpdating ? <Loader2 size={14} className="animate-spin" /> : <ChevronDown size={14} />}
-                                        </div>
+                                        <ChevronDown size={14} className="absolute right-3 top-3 text-slate-500 pointer-events-none" />
                                     </div>
-                                    <p className="text-[8px] text-slate-600 italic mt-1 uppercase tracking-tighter">* El cambio quedará registrado en el historial de auditoría bajo la capa RAW vs NORMALIZADA.</p>
-                                </div>
-                            )}
-                        </section>
+                                )}
+                            </div>
+                            {/* Simple progreso visual */}
+                            <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden">
+                                <div
+                                    className={`h-full bg-indigo-500 transition-all duration-1000`}
+                                    style={{ width: selectedAviso.estado_workflow_interno === 'APROBADO' ? '100%' : selectedAviso.estado_workflow_interno === 'EN_GESTION' ? '50%' : '25%' }}
+                                />
+                            </div>
+                        </div>
 
-                        {/* General Stats Grid */}
+                        {/* Grid de Datos Clave */}
                         <div className="grid grid-cols-2 gap-4">
                             {[
-                                { label: 'Ubic. Técnica', val: selectedAviso.ubicacion_tecnica || 'N/A', icon: Zap },
-                                { label: 'TIPO GESTIÓN', val: selectedAviso.tipo_de_gestion || 'N/A', icon: HardHat },
-                                { label: 'Gestor', val: selectedAviso.gestor_predial || 'Pte Asignar', icon: FileText },
-                                { label: 'Autor', val: selectedAviso.autor_aviso || 'N/A', icon: Info }
+                                { label: 'Ubicación Técnica', val: selectedAviso.ubicacion_tecnica || 'N/D', icon: Zap },
+                                { label: 'Gestor Asignado', val: selectedAviso.gestor_predial || 'Pendiente', icon: User },
+                                { label: 'Autor del Aviso', val: selectedAviso.autor_aviso || 'Sistema', icon: Info },
+                                { label: 'Sector', val: selectedAviso.sector || 'N/D', icon: MapPin }
                             ].map((item, i) => (
-                                <div key={i} className="p-4 bg-white/[0.03] border border-white/[0.05] rounded-2xl group hover:border-indigo-500/20 transition-all">
-                                    <div className="flex items-center gap-2 mb-1.5">
-                                        <item.icon size={12} className="text-slate-600 group-hover:text-indigo-400 transition-colors" />
-                                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{item.label}</span>
+                                <div key={i} className="p-4 bg-slate-800/30 rounded-2xl border border-slate-700/30 flex items-start gap-4 hover:bg-slate-800/50 transition-colors">
+                                    <div className="p-2 bg-slate-900 rounded-lg text-slate-400">
+                                        <item.icon size={18} />
                                     </div>
-                                    <p className="text-xs font-bold text-slate-200 truncate">{item.val}</p>
+                                    <div>
+                                        <p className="text-xs text-slate-500 font-medium mb-1">{item.label}</p>
+                                        <p className="text-sm font-semibold text-slate-200">{item.val}</p>
+                                    </div>
                                 </div>
                             ))}
                         </div>
 
-                        <section>
-                            <div className="flex items-center gap-2 mb-4 text-slate-500">
-                                <FileText size={14} />
-                                <h4 className="text-[10px] font-black uppercase tracking-[0.2em]">Descripción Base</h4>
-                            </div>
-                            <div className="p-6 bg-white/[0.02] border border-white/5 rounded-[2rem] text-xs text-slate-400 leading-relaxed font-medium">
-                                {selectedAviso.descripcion || 'Sin descripción detallada.'}
-                            </div>
-                        </section>
+                        {/* Descripción Base */}
+                        <div className="p-6 bg-slate-800/30 rounded-2xl border border-slate-700/30">
+                            <h3 className="text-sm font-semibold text-slate-400 mb-3 flex items-center gap-2"><FileText size={16} /> Descripción Base</h3>
+                            <p className="text-sm text-slate-300 leading-relaxed">
+                                {selectedAviso.descripcion || 'Este aviso no cuenta con una descripción detallada en la base de datos.'}
+                            </p>
+                        </div>
                     </div>
                 )}
 
+                {/* 2. TÉCNICO TAB */}
                 {currentTab === 'tecnico' && (
-                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        {/* Conditional Logic by Type (Section 3) */}
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="w-10 h-10 bg-indigo-600/10 rounded-xl flex items-center justify-center text-indigo-400 border border-indigo-500/20 shadow-inner">
-                                {selectedAviso.tipo_de_gestion?.includes('VEGETA') ? <TreeDeciduous size={20} /> :
-                                    selectedAviso.tipo_de_gestion?.includes('CONSTRU') ? <Home size={20} /> : <HardHat size={20} />}
-                            </div>
-                            <div>
-                                <h4 className="text-sm font-black text-white uppercase tracking-tight">{selectedAviso.tipo_de_gestion}</h4>
-                                <p className="text-[10px] text-slate-500 font-bold uppercase">Reglas de Negocio Aplicadas</p>
-                            </div>
-                        </div>
-
-                        {/* VEGETACIÓN MODULE (Section 1) */}
+                    <div className="space-y-6 animate-in fade-in duration-300">
                         {selectedAviso.tipo_de_gestion?.includes('VEGETA') && (
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="p-5 bg-white/[0.02] border border-white/5 rounded-3xl group">
-                                    <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1 group-hover:text-indigo-400 transition-colors">Distancia Copa-Fase</p>
-                                    <p className="text-xl font-black text-white">{selectedAviso.distancia_copa_fase || '0.00'} <span className="text-xs text-slate-500">metros</span></p>
+                                <div className="p-6 bg-slate-800/50 rounded-2xl border border-slate-700/50">
+                                    <p className="text-xs text-slate-500 mb-1">Distancia Copa-Fase</p>
+                                    <p className="text-3xl font-bold text-white mb-1">{selectedAviso.distancia_copa_fase || '0.00'}<span className="text-sm text-slate-500 ml-1">metros</span></p>
                                 </div>
-                                <div className="p-5 bg-white/[0.02] border border-white/5 rounded-3xl group">
-                                    <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1 group-hover:text-amber-400 transition-colors">Altura Estimada</p>
-                                    <p className="text-xl font-black text-white">{selectedAviso.altura_individuo || '0.00'} <span className="text-xs text-slate-500">metros</span></p>
+                                <div className="p-6 bg-slate-800/50 rounded-2xl border border-slate-700/50">
+                                    <p className="text-xs text-slate-500 mb-1">Altura Estimada</p>
+                                    <p className="text-3xl font-bold text-white mb-1">{selectedAviso.altura_individuo || '0.00'}<span className="text-sm text-slate-500 ml-1">metros</span></p>
                                 </div>
-                                <div className="col-span-2 p-5 bg-white/[0.02] border border-white/5 rounded-3xl">
-                                    <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-2">Especie Predominante</p>
-                                    <p className="text-sm font-bold text-slate-300 italic">"{selectedAviso.especie_con_mas_riesgo || 'No identificada'}"</p>
+                                <div className="col-span-2 p-6 bg-slate-800/50 rounded-2xl border border-slate-700/50">
+                                    <p className="text-xs text-slate-500 mb-2">Especie Predominante</p>
+                                    <p className="text-lg font-medium text-slate-200">{selectedAviso.especie_con_mas_riesgo || 'No identificada de forma específica'}</p>
                                 </div>
                             </div>
                         )}
 
-                        {/* CONSTRUCCIÓN MODULE (Section 1) */}
                         {selectedAviso.tipo_de_gestion?.includes('CONSTRU') && (
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="col-span-2 p-5 bg-white/[0.02] border border-white/5 rounded-3xl">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Estado Constructivo</p>
-                                        <span className="px-2 py-0.5 bg-amber-500/10 text-amber-500 text-[8px] font-black rounded-lg border border-amber-500/20">{selectedAviso.status_sistema || 'EN OBRA'}</span>
-                                    </div>
-                                    <p className="text-sm font-bold text-slate-200">{selectedAviso.tipo_construccion || 'Vivienda / Bodega'}</p>
-                                </div>
-                                {selectedAviso.flag_intervencion_franja && (
-                                    <div className="col-span-2 p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl flex items-center gap-3 text-rose-500 text-[10px] font-black uppercase tracking-widest animate-pulse">
-                                        <AlertTriangle size={16} /> Intervención en Franja de Servidumbre
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* PREDIAL MODULE (Section 3.5) */}
-                        <section className="p-6 bg-slate-900 border border-white/10 rounded-[2.5rem] shadow-inner">
-                            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Cartera Predial</h4>
                             <div className="space-y-4">
-                                <div className="flex justify-between items-center text-xs">
-                                    <span className="text-slate-500 font-bold uppercase tracking-tighter">Propietario / Predio</span>
-                                    <span className="text-white font-black">{selectedAviso.predio_propietario || 'S/D'}</span>
-                                </div>
-                                <div className="flex justify-between items-center text-xs">
-                                    <span className="text-slate-500 font-bold uppercase tracking-tighter">Actividad Realizada</span>
-                                    <span className="text-indigo-400 font-black">{selectedAviso.actividad_predial || 'Pte Gestión'}</span>
-                                </div>
-                                <div className="pt-2 border-t border-white/5">
-                                    <p className="text-[8px] font-black text-slate-700 uppercase mb-1">Observación Operativa</p>
-                                    <p className="text-[11px] text-slate-400 font-medium italic leading-relaxed">{selectedAviso.observacion_predial || 'Sin novedades prediales registradas.'}</p>
-                                </div>
-                            </div>
-                        </section>
-                    </div>
-                )}
-
-                {currentTab === 'insumos' && (
-                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        {/* Check Insumos 17.5 */}
-                        <section className="p-8 bg-slate-900 rounded-[2.5rem] border border-white/10 relative overflow-hidden group">
-                            <div className="flex items-center justify-between mb-8">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-14 h-14 bg-indigo-500/10 rounded-2xl flex items-center justify-center border border-indigo-500/20 text-indigo-400 shadow-inner">
-                                        <FolderKanban size={28} />
+                                <div className="p-6 bg-slate-800/50 rounded-2xl border border-slate-700/50">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <p className="text-xs text-slate-500">Estado Constructivo</p>
+                                        <span className="px-3 py-1 bg-amber-500/10 text-amber-400 text-xs rounded-full font-semibold">{selectedAviso.status_sistema || 'EN OBRA'}</span>
                                     </div>
-                                    <div>
-                                        <h5 className="text-sm font-black text-white tracking-tighter uppercase italic">Control SharePoint</h5>
-                                        <p className="text-[10px] text-slate-500 font-bold uppercase italic">Auditoría Estructural</p>
-                                    </div>
+                                    <p className="text-lg font-medium text-white">{selectedAviso.tipo_construccion || 'Sin clasificar'}</p>
                                 </div>
-                                {!isReadOnly && (
-                                    <button
-                                        onClick={handleValidateInsumos}
-                                        disabled={validating}
-                                        className="h-11 px-6 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-xl active:scale-95"
-                                    >
-                                        {validating ? <Loader2 size={16} className="animate-spin" /> : 'Auditar Carpeta'}
-                                    </button>
-                                )}
-                            </div>
-
-                            {/* Checklist (Section 17.5) */}
-                            <div className="space-y-3">
-                                {[
-                                    { label: 'Subcarpeta PREDIAL', ok: true },
-                                    { label: 'Subcarpeta INVENTARIO', ok: true },
-                                    { label: 'Archivo KML en SHP', ok: selectedAviso.longitud_decimal ? true : false },
-                                    { label: 'Geometría dentro del Buffer', ok: selectedAviso.risk_score < 90 },
-                                ].map((step, i) => (
-                                    <div key={i} className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${step.ok === true ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400' :
-                                        'bg-rose-500/5 border-rose-500/20 text-rose-400'
-                                        }`}>
-                                        <span className="text-[10px] font-black uppercase tracking-widest">{step.label}</span>
-                                        {step.ok === true ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
-                    </div>
-                )}
-
-                {currentTab === 'history' && (
-                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                        {historial.length > 0 ? historial.map((h, i) => (
-                            <div key={i} className="flex gap-4 group">
-                                <div className="flex flex-col items-center gap-2">
-                                    <div className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center border border-white/10 text-slate-500 group-hover:text-indigo-400 group-hover:bg-indigo-500/10 transition-all font-black text-[10px]">
-                                        {h.usuario?.substring(0, 1) || 'S'}
-                                    </div>
-                                    <div className="w-px flex-1 bg-white/5" />
-                                </div>
-                                <div className="flex-1 pb-8">
-                                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1">{h.created_at?.split('T')[0]} - {h.usuario}</p>
-                                    <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl group-hover:border-white/10 transition-all shadow-sm">
-                                        <p className="text-xs font-bold text-slate-300">Modificación de <span className="text-indigo-400">{h.campo}</span></p>
-                                        <div className="mt-3 flex items-center gap-2 text-[10px] font-medium text-slate-500">
-                                            <span className="line-through opacity-50">{h.valor_anterior}</span>
-                                            <ChevronRight size={10} />
-                                            <span className="text-emerald-400 font-bold">{h.valor_nuevo}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )) : (
-                            <div className="flex flex-col items-center justify-center p-12 text-center opacity-30">
-                                <SearchCode size={40} className="mb-4" />
-                                <p className="text-xs font-black uppercase tracking-widest">Sin registros de auditoría</p>
                             </div>
                         )}
+
+                        <div className="p-6 bg-slate-800/30 rounded-2xl border border-slate-700/30">
+                            <h4 className="text-sm font-semibold text-slate-400 mb-4">Cartera Predial</h4>
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center pb-3 border-b border-slate-700/50">
+                                    <span className="text-sm text-slate-500">Propietario / Predio</span>
+                                    <span className="text-sm font-semibold text-white">{selectedAviso.predio_propietario || 'S/D'}</span>
+                                </div>
+                                <div className="flex justify-between items-center pb-3 border-b border-slate-700/50">
+                                    <span className="text-sm text-slate-500">Actividad Realizada</span>
+                                    <span className="text-sm font-semibold text-indigo-400">{selectedAviso.actividad_predial || 'Pte Gestión'}</span>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-slate-500 mb-2">Observación Operativa</p>
+                                    <p className="text-sm text-slate-300 bg-slate-900 p-4 rounded-xl">{selectedAviso.observacion_predial || 'Sin novedades registradas.'}</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
 
-                {currentTab === 'chat' && (
-                    <div className="h-full flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-700">
-                        <section className="flex-1 space-y-4 mb-4 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/5">
+                {/* 3. COMUNICACIONES TAB */}
+                {currentTab === 'comunicacion' && (
+                    <div className="h-full flex flex-col animate-in fade-in duration-300 max-h-[500px]">
+                        <div className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-thin scrollbar-thumb-slate-700 mb-4">
                             {comments.length > 0 ? comments.map((c, i) => (
                                 <div key={i} className={`flex gap-3 ${c.usuario === profile?.full_name ? 'flex-row-reverse' : ''}`}>
-                                    <div className="w-8 h-8 rounded-full bg-indigo-600/20 border border-indigo-500/50 flex items-center justify-center text-[10px] font-black text-indigo-400 shrink-0">
+                                    <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-400 shrink-0">
                                         {c.usuario?.substring(0, 2).toUpperCase() || 'OP'}
                                     </div>
-                                    <div className={`max-w-[80%] p-4 rounded-3xl text-xs font-bold ${c.usuario === profile?.full_name ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white/5 text-slate-300 rounded-tl-none border border-white/5'}`}>
-                                        <div className="flex justify-between gap-4 mb-1 opacity-50 text-[8px] uppercase tracking-tighter">
+                                    <div className={`max-w-[75%] p-4 rounded-2xl text-sm ${c.usuario === profile?.full_name ? 'bg-indigo-600/90 text-white rounded-tr-none' : 'bg-slate-800 text-slate-200 rounded-tl-none'}`}>
+                                        <div className="flex justify-between gap-4 mb-2 opacity-60 text-xs">
                                             <span>{c.usuario}</span>
                                             <span>{new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                         </div>
@@ -523,49 +374,103 @@ const AvisoDetail: React.FC = () => {
                                     </div>
                                 </div>
                             )) : (
-                                <div className="h-full flex flex-col items-center justify-center opacity-20 gap-4">
-                                    <MessageSquare size={48} />
-                                    <p className="text-[10px] font-black uppercase tracking-[0.3em]">Sin mensajes operativos</p>
+                                <div className="flex flex-col items-center justify-center h-full text-slate-500 space-y-3">
+                                    <MessageSquare size={32} />
+                                    <p className="text-sm">No hay mensajes. Rompe el hielo.</p>
                                 </div>
                             )}
-                        </section>
+                        </div>
 
-                        <div className="shrink-0 pt-4 border-t border-white/5">
-                            <div className="relative">
-                                <textarea
-                                    value={newComment}
-                                    onChange={(e) => setNewComment(e.target.value)}
-                                    placeholder="Instrucciones para campo o reporte de oficina..."
-                                    className="w-full h-24 bg-white/5 border border-white/10 rounded-[1.5rem] p-4 text-xs font-bold text-white placeholder:text-slate-600 outline-none focus:border-indigo-500/50 transition-all resize-none"
-                                />
-                                <button
-                                    onClick={handlePostComment}
-                                    disabled={isSending || !newComment.trim()}
-                                    className="absolute bottom-4 right-4 w-10 h-10 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl flex items-center justify-center shadow-lg transition-all disabled:opacity-50 active:scale-90"
-                                >
-                                    {isSending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                                </button>
+                        <div className="pt-4 border-t border-slate-800 flex gap-2">
+                            <input
+                                type="text"
+                                value={newComment}
+                                onChange={(e) => setNewComment(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handlePostComment()}
+                                placeholder="Escribe un mensaje o actualización..."
+                                className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:border-indigo-500"
+                            />
+                            <button
+                                onClick={handlePostComment}
+                                disabled={isSending || !newComment.trim()}
+                                className="w-12 h-12 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl flex items-center justify-center transition-colors disabled:opacity-50"
+                            >
+                                {isSending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* 4. ARCHIVOS TAB */}
+                {currentTab === 'archivos' && (
+                    <div className="space-y-6 animate-in fade-in duration-300">
+                        <div className="p-6 bg-slate-800/50 rounded-2xl border border-slate-700/50">
+                            <div className="flex items-center justify-between mb-8">
+                                <div className="flex items-center gap-3">
+                                    <FolderKanban size={24} className="text-indigo-400" />
+                                    <div>
+                                        <h3 className="text-base font-semibold text-white">Directorio Integrado</h3>
+                                        <p className="text-sm text-slate-400">Archivos y evidencias en nube</p>
+                                    </div>
+                                </div>
+                                {!isReadOnly && (
+                                    <button
+                                        onClick={handleValidateInsumos}
+                                        disabled={validating}
+                                        className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition-colors"
+                                    >
+                                        {validating ? <Loader2 size={16} className="animate-spin inline" /> : 'Auditar Archivos'}
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="space-y-2">
+                                {[
+                                    { label: 'Carpeta Predial Asociada', ok: true },
+                                    { label: 'Evidencia Fotográfica', ok: true },
+                                    { label: 'Archivo KML Generado', ok: !!selectedAviso.longitud_decimal }
+                                ].map((step, i) => (
+                                    <div key={i} className={`flex items-center justify-between p-4 rounded-xl border ${step.ok ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400' : 'bg-slate-900/50 border-slate-800 text-slate-500'}`}>
+                                        <span className="text-sm font-medium">{step.label}</span>
+                                        {step.ok ? <CheckCircle2 size={18} /> : <span className="text-xs">Falta</span>}
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>
                 )}
 
-            </div>
-
-            {/* ⚙️ Footer Actions */}
-            <footer className="p-8 border-t border-white/5 bg-slate-950/50 flex gap-4 shrink-0">
-                <button
-                    onClick={() => setCurrentTab('history')}
-                    className="flex-1 h-14 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
-                >
-                    <History size={14} className="inline mr-2" /> Auditoría
-                </button>
-                {!isReadOnly && (
-                    <button className="flex-[1.5] h-14 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-600/40 active:scale-95 group">
-                        Gestionar <ChevronRight size={16} className="inline ml-2 group-hover:translate-x-1 transition-transform" />
-                    </button>
+                {/* 5. AUDITORÍA TAB */}
+                {currentTab === 'auditoria' && (
+                    <div className="space-y-4 animate-in fade-in duration-300">
+                        {historial.length > 0 ? historial.map((h, i) => (
+                            <div key={i} className="flex gap-4 p-4 bg-slate-800/30 rounded-2xl border border-slate-700/30">
+                                <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-slate-400 font-bold shrink-0">
+                                    {(h.usuario || 'A').substring(0, 2).toUpperCase()}
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="text-sm font-semibold text-slate-200">{h.usuario}</span>
+                                        <span className="text-xs text-slate-500">{h.created_at?.split('T')[0]}</span>
+                                    </div>
+                                    <p className="text-sm text-slate-400">Actualizó <span className="text-indigo-400 font-medium">{h.campo}</span></p>
+                                    <div className="flex items-center gap-2 mt-2 text-xs bg-slate-900 px-3 py-2 rounded-lg inline-flex max-w-full overflow-hidden">
+                                        <span className="text-slate-500 line-through truncate max-w-[100px]">{h.valor_anterior}</span>
+                                        <ChevronRight size={14} className="text-slate-600 shrink-0" />
+                                        <span className="text-emerald-400 font-medium truncate max-w-[100px]">{h.valor_nuevo}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )) : (
+                            <div className="p-12 text-center text-slate-500">
+                                <History size={32} className="mx-auto mb-3 opacity-50" />
+                                <p className="text-sm">Sin registros de auditoría</p>
+                            </div>
+                        )}
+                    </div>
                 )}
-            </footer>
+
+            </div>
         </div>
     );
 };
