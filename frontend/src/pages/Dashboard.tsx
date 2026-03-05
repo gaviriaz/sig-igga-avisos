@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Search,
     Settings,
@@ -53,9 +53,30 @@ const Dashboard: React.FC = () => {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const navigate = useNavigate();
 
+    const [searchParams] = useSearchParams();
+
     useEffect(() => {
         initialize();
-    }, []);
+
+        // Handle deep-linking to sections
+        const section = searchParams.get('section');
+        if (section) {
+            switch (section) {
+                case 'infraestructura':
+                    setCurrentTab('operations');
+                    break;
+                case 'sistemas-gis':
+                    setCurrentTab('analytics');
+                    break;
+                case 'ciberseguridad':
+                    setCurrentTab('users');
+                    break;
+                case 'protocolos':
+                    setCurrentTab('settings');
+                    break;
+            }
+        }
+    }, [searchParams]);
 
     const fetchAvisos = async () => {
         setLoading(true);

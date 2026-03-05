@@ -4,6 +4,10 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import Infraestructura from './pages/Infraestructura';
+import SistemasGIS from './pages/SistemasGIS';
+import Ciberseguridad from './pages/Ciberseguridad';
+import Protocolos from './pages/Protocolos';
 import ProtectedRoute from './components/ProtectedRoute';
 
 const App: React.FC = () => {
@@ -19,6 +23,10 @@ const App: React.FC = () => {
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/infraestructura" element={<Infraestructura />} />
+                <Route path="/sistemas-gis" element={<SistemasGIS />} />
+                <Route path="/ciberseguridad" element={<Ciberseguridad />} />
+                <Route path="/protocolos" element={<Protocolos />} />
 
                 {/* 🔐 Protected Routes */}
                 <Route

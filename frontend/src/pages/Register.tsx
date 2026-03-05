@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import AuthLayout from '../components/AuthLayout';
 import { supabase } from '../lib/supabase';
-import { UserPlus, Mail, Lock, User, Loader2, AlertCircle, ShieldCheck, Briefcase } from 'lucide-react';
+import { UserPlus, Mail, Lock, User, Loader2, AlertCircle, ShieldCheck, Briefcase, CheckCircle2 } from 'lucide-react';
 
 const Register: React.FC = () => {
     const [name, setName] = useState('');
@@ -44,13 +44,16 @@ const Register: React.FC = () => {
     if (success) {
         return (
             <AuthLayout title="Registro Exitoso" subtitle="Revise su correo para confirmar su cuenta.">
-                <div className="flex flex-col items-center gap-6 p-8 bg-emerald-500/10 border border-emerald-500/20 rounded-3xl text-center">
-                    <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center animate-bounce">
-                        <ShieldCheck size={32} />
+                <div className="flex flex-col items-center gap-8 p-10 glass-morphism rounded-[3rem] text-center animate-in fade-in zoom-in duration-500">
+                    <div className="w-20 h-20 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center animate-bounce shadow-[0_0_40px_rgba(16,185,129,0.3)]">
+                        <CheckCircle2 size={40} />
                     </div>
                     <div>
-                        <h3 className="text-lg font-black text-white mb-2 uppercase">¡Cuenta Solicitada!</h3>
-                        <p className="text-sm text-slate-400 font-medium leading-relaxed">Redirigiendo a la pantalla de acceso en 3 segundos...</p>
+                        <h3 className="text-2xl font-black text-white mb-3 uppercase tracking-tight">¡Misión Cumplida!</h3>
+                        <p className="text-slate-400 font-medium leading-relaxed max-w-xs mx-auto">Su solicitud ha sido procesada. Redirigiendo a la terminal de acceso...</p>
+                    </div>
+                    <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-500 animate-[progress_3s_linear]" />
                     </div>
                 </div>
             </AuthLayout>
@@ -64,67 +67,67 @@ const Register: React.FC = () => {
         >
             <form onSubmit={handleRegister} className="flex flex-col gap-6">
                 {error && (
-                    <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center gap-3 text-rose-400 text-sm font-bold">
+                    <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center gap-3 text-rose-400 text-sm font-bold animate-in fade-in zoom-in duration-300">
                         <AlertCircle size={18} /> {error}
                     </div>
                 )}
 
-                <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Nombre Completo</label>
-                    <div className="relative group">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors" size={18} />
+                <div className="flex flex-col gap-2 group/field">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-4 group-focus-within/field:text-primary transition-colors">Nombre de Operador</label>
+                    <div className="relative">
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within/field:text-primary transition-colors" size={18} />
                         <input
                             type="text"
                             required
                             placeholder="Ej: Ing. Juan Pérez"
-                            className="w-full h-12 bg-white/5 border border-white/10 rounded-2xl pl-12 pr-6 outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-medium text-sm text-white"
+                            className="input-premium w-full pl-12"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                         />
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Perfil Técnico</label>
-                    <div className="relative group">
-                        <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors" size={18} />
+                <div className="flex flex-col gap-2 group/field">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-4 group-focus-within/field:text-primary transition-colors">Rango / Perfil</label>
+                    <div className="relative">
+                        <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within/field:text-primary transition-colors" size={18} />
                         <select
                             value={role}
                             onChange={(e) => setRole(e.target.value)}
-                            className="w-full h-12 bg-white/5 border border-white/10 rounded-2xl pl-12 pr-6 outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-medium text-sm text-white appearance-none cursor-pointer"
+                            className="input-premium w-full pl-12 appearance-none cursor-pointer"
                         >
-                            <option value="Oficina" className="bg-slate-900">Oficina (Analista de Datos)</option>
-                            <option value="Analista Ambiental" className="bg-slate-900">Analista Ambiental</option>
-                            <option value="Coordinador Predial Junior" className="bg-slate-900">Coordinador Predial Junior</option>
-                            <option value="Coordinador Predial Senior" className="bg-slate-900">Coordinador Predial Senior</option>
+                            <option value="Oficina" className="bg-slate-900 font-bold">Oficina (Analista de Datos)</option>
+                            <option value="Analista Ambiental" className="bg-slate-900 font-bold">Analista Ambiental</option>
+                            <option value="Coordinador Predial Junior" className="bg-slate-900 font-bold">Coordinador Predial Junior</option>
+                            <option value="Coordinador Predial Senior" className="bg-slate-900 font-bold">Coordinador Predial Senior</option>
                         </select>
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Email Corporativo</label>
-                    <div className="relative group">
-                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors" size={18} />
+                <div className="flex flex-col gap-2 group/field">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-4 group-focus-within/field:text-primary transition-colors">Correo Institucional</label>
+                    <div className="relative">
+                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within/field:text-primary transition-colors" size={18} />
                         <input
                             type="email"
                             required
                             placeholder="juan.perez@igga.com"
-                            className="w-full h-12 bg-white/5 border border-white/10 rounded-2xl pl-12 pr-6 outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-medium text-sm text-white"
+                            className="input-premium w-full pl-12"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                         />
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Contraseña de Acceso</label>
-                    <div className="relative group">
-                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors" size={18} />
+                <div className="flex flex-col gap-2 group/field">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-4 group-focus-within/field:text-primary transition-colors">Seguridad de Acceso</label>
+                    <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within/field:text-primary transition-colors" size={18} />
                         <input
                             type="password"
                             required
                             placeholder="Mínimo 8 caracteres"
-                            className="w-full h-12 bg-white/5 border border-white/10 rounded-2xl pl-12 pr-6 outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-medium text-sm text-white"
+                            className="input-premium w-full pl-12"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                         />
@@ -134,15 +137,16 @@ const Register: React.FC = () => {
                 <button
                     type="submit"
                     disabled={loading}
-                    className="h-14 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 shadow-2xl shadow-indigo-600/20 disabled:opacity-50"
+                    className="btn-primary h-14 w-full text-sm uppercase tracking-[0.2em] font-black mt-2"
                 >
                     {loading ? <Loader2 className="animate-spin" size={20} /> : <UserPlus size={20} />}
-                    {loading ? 'Procesando Registro...' : 'Crear Cuenta Técnica'}
+                    {loading ? 'Validando...' : 'Obtener Acceso Técnico'}
                 </button>
 
-                <div className="text-center mt-4">
+                <div className="text-center mt-6">
                     <p className="text-sm text-slate-500 font-medium">
-                        ¿Ya posee credenciales? <Link to="/login" className="text-indigo-400 font-black hover:text-white transition-colors uppercase text-xs tracking-tighter">Acceso Directo</Link>
+                        ¿Ya posee credenciales? <br />
+                        <Link to="/login" className="text-primary font-black hover:text-white transition-colors uppercase text-xs tracking-tighter mt-2 inline-block">Acceso Directo a Terminal</Link>
                     </p>
                 </div>
             </form>
@@ -151,3 +155,4 @@ const Register: React.FC = () => {
 };
 
 export default Register;
+
