@@ -9,6 +9,7 @@ interface AuthState {
     profile: {
         role: UserRole;
         full_name: string;
+        email?: string;
     } | null;
     loading: boolean;
     initialized: boolean;
@@ -34,7 +35,11 @@ export const useAuthStore = create<AuthState>((set) => ({
 
         set({
             user,
-            profile: profile as any || { role: 'Oficina', full_name: user.user_metadata?.full_name || 'Usuario' },
+            profile: {
+                role: profile?.role || 'Oficina',
+                full_name: profile?.full_name || user.user_metadata?.full_name || 'Usuario',
+                email: user.email
+            },
             loading: false
         });
     },
@@ -57,7 +62,11 @@ export const useAuthStore = create<AuthState>((set) => ({
 
                 set({
                     user: session.user,
-                    profile: profile as any || { role: 'Oficina', full_name: session.user.user_metadata?.full_name || 'Usuario' },
+                    profile: {
+                        role: profile?.role || 'Oficina',
+                        full_name: profile?.full_name || session.user.user_metadata?.full_name || 'Usuario',
+                        email: session.user.email
+                    },
                     initialized: true,
                     loading: false
                 });

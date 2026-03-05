@@ -223,8 +223,6 @@ VALUES ('CUNDINAMARCA'),
     ('ANTIOQUIA'),
     ('VALLE DEL CAUCA') ON CONFLICT DO NOTHING;
 
-);
-
 CREATE TABLE IF NOT EXISTS dom_municipio (
     municipio TEXT PRIMARY KEY,
     departamento TEXT,

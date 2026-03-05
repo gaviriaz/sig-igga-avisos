@@ -119,11 +119,22 @@ const Map: React.FC<MapProps> = ({ onMapReady }) => {
         }
     };
 
-    // 3. Sincronización de Avisos
+    // 3. Sincronización de Avisos (Ordenada por Riesgo para que Críticos queden Arriba)
     useEffect(() => {
         avisosSource.current.clear();
-        const features = avisos
+        
+        // Función auxiliar para calcular prioridad de renderizado (Z-Index simulado)
+        const getRiskPriority = (a: Aviso) => {
+            const dist = typeof a.distancia_copa_fase === 'string' ? parseFloat(a.distancia_copa_fase) : a.distancia_copa_fase;
+            const prio = (a.prioridad_operativa || '').toUpperCase();
+            if (a.risk_score > 80 || (dist !== undefined && dist <= 5) || ['CRITICO', 'MUY ALTA', 'ALTA'].includes(prio)) return 3;
+            if (a.risk_score > 50 || (dist !== undefined && dist <= 10)) return 2;
+            return 1;
+        };
+
+        const features = [...avisos]
             .filter(a => a.latitud_decimal && a.longitud_decimal)
+            .sort((a, b) => getRiskPriority(a) - getRiskPriority(b)) // Menor prioridad primero, críticos al final (arriba)
             .map((a: Aviso) => {
                 const lon = typeof a.longitud_decimal === 'string' ? parseFloat(a.longitud_decimal) : a.longitud_decimal;
                 const lat = typeof a.latitud_decimal === 'string' ? parseFloat(a.latitud_decimal) : a.latitud_decimal;
@@ -141,12 +152,33 @@ const Map: React.FC<MapProps> = ({ onMapReady }) => {
     useEffect(() => {
         if (!mapElement.current) return;
         const baseLayer = new TileLayer({ source: new OSM() });
-        const styles = {
+        const styles: { [key: string]: any } = {
             lineas: new Style({ stroke: new Stroke({ color: '#fbbf24', width: 2.5 }) }),
             torres: new Style({ image: new Circle({ radius: 3, fill: new Fill({ color: '#f87171' }), stroke: new Stroke({ color: '#fff', width: 1 }) }) }),
             servidumbre: new Style({ fill: new Fill({ color: 'rgba(52, 211, 153, 0.12)' }), stroke: new Stroke({ color: '#34d399', width: 0.8, lineDash: [4, 4] }) }),
             predios: new Style({ fill: new Fill({ color: 'rgba(59, 130, 246, 0.05)' }), stroke: new Stroke({ color: '#3b82f6', width: 0.4 }) }),
-            avisos: new Style({ image: new Circle({ radius: 5, fill: new Fill({ color: '#6366f1' }), stroke: new Stroke({ color: '#fff', width: 2 }) }) })
+            avisos: (feature: any) => {
+                const a = feature.getProperties() as Aviso;
+                let color = '#3b82f6'; // Default Blue
+
+                if (a.prioridad_operativa === 'CRITICO' || a.risk_score > 80) {
+                    color = '#f43f5e'; // Rose (Crítico)
+                } else if ((a.distancia_copa_fase && a.distancia_copa_fase < 2.5) || a.risk_score > 60) {
+                    color = '#f59e0b'; // Amber (Alto Riesgo)
+                } else if (a.prioridad_operativa === 'MEDIA' || a.risk_score > 30) {
+                    color = '#fbbf24'; // Yellow (Medio)
+                } else {
+                    color = '#10b981'; // Emerald (Bajo/Gestión)
+                }
+
+                return new Style({
+                    image: new Circle({
+                        radius: 6,
+                        fill: new Fill({ color }),
+                        stroke: new Stroke({ color: '#fff', width: 2 })
+                    })
+                });
+            }
         };
 
         layerRefs.current.lineas = new VectorLayer({ source: infraSources.current.lineas, style: styles.lineas, visible: layersVisible.lineas });

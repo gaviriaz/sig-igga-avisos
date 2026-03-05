@@ -113,6 +113,55 @@ const Dashboard: React.FC = () => {
         }
     };
 
+    const handleCorteMaestro = async () => {
+        setIsSyncing(true);
+        try {
+            const resp = await fetch('http://localhost:8000/etl/sync-geam', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: profile?.email })
+            });
+            const data = await resp.json();
+            if (resp.ok) {
+                alert(`✅ CORTE SINCRONIZADO: ${data.filename}\nBatch: ${data.batch_id}`);
+                await fetchAvisos();
+            } else {
+                alert(`❌ ERROR: ${data.detail}`);
+            }
+        } catch (e) {
+            alert("❌ Fallo de conexión con el servidor");
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
+    const handleManualUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsSyncing(true);
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const resp = await fetch(`http://localhost:8000/etl/upload-geam?email=${profile?.email}`, {
+                method: 'POST',
+                body: formData
+            });
+            const data = await resp.json();
+            if (resp.ok) {
+                alert(`✅ CARGA MANUAL EXITOSA: ${data.filename}`);
+                await fetchAvisos();
+            } else {
+                alert(`❌ ERROR: ${data.detail}`);
+            }
+        } catch (e) {
+            alert("❌ Fallo al subir el archivo");
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
     const stats = [
         { label: 'Críticos', value: avisos.filter(a => a.risk_score > 75).length, icon: AlertTriangle, color: 'text-rose-500', bg: 'bg-rose-500/10' },
         { label: 'Pendientes QA', value: avisos.filter(a => (a.estado_workflow_interno || '').includes('VALIDAR')).length, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-500/10' },
@@ -212,7 +261,25 @@ const Dashboard: React.FC = () => {
                         )}
 
                         <div className="flex gap-2">
-                            {(profile?.role === 'Oficina' || profile?.role === 'Coordinador Predial Senior') && (
+                            {profile?.email === 'agaviria@igga.com.co' ? (
+                                <>
+                                    <button
+                                        onClick={handleCorteMaestro}
+                                        disabled={isSyncing}
+                                        className={`h-11 px-6 rounded-2xl flex items-center gap-2 font-black text-xs transition-all bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30`}
+                                        title="Sincronización Automática desde SharePoint"
+                                    >
+                                        {isSyncing ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} className="fill-white" />}
+                                        SINCRONIZAR CORTE (AUTO)
+                                    </button>
+
+                                    <label className="h-11 px-4 rounded-2xl flex items-center gap-2 font-bold text-xs bg-slate-800 border border-white/10 hover:bg-slate-700 cursor-pointer transition-all text-slate-300">
+                                        <Database size={14} className="text-indigo-400" />
+                                        SUBIR EXCEL
+                                        <input type="file" className="hidden" accept=".xlsx" onChange={handleManualUpload} disabled={isSyncing} />
+                                    </label>
+                                </>
+                            ) : (profile?.role === 'Oficina' || profile?.role === 'Coordinador Predial Senior') && (
                                 <>
                                     <button onClick={handleSync} disabled={isSyncing} className={`h-11 px-4 rounded-2xl flex items-center gap-2 font-bold text-xs transition-all ${isSyncing ? 'bg-indigo-500/20 text-indigo-300' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20'}`}>
                                         {isSyncing ? <Loader2 size={16} className="animate-spin" /> : <Share2 size={16} />}

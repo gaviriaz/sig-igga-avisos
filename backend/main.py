@@ -10,29 +10,35 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# ─── DATABASE (siempre SQLite local para desarrollo) ─────────────────────────
-DATABASE_URL = "sqlite:///./sig_igga_local_dev.db"
+#  DATABASE (PostgreSQL Supabase for Platinum Senior Master Deployment) 
+DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:lP5LvF5dkFzIjvEU@db.vdzfamjklmwlptitxvvd.supabase.co:5432/postgres")
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# ─── CREAR TABLAS AL INICIO ───────────────────────────────────────────────────
 from database.models import Base
-Base.metadata.create_all(bind=engine)
-print("✅ Tablas SQLite creadas/verificadas correctamente.")
+try:
+    Base.metadata.create_all(bind=engine)
+    print("LOG: Tablas PostgreSQL en Supabase creadas/verificadas correctamente.")
+except Exception as e:
+    print(f"WARN: Error creando tablas PostgreSQL: {e}")
 
-# ─── FASTAPI APP ──────────────────────────────────────────────────────────────
-app = FastAPI(title="SIG IGGA/ISA - Gestión Integral de Avisos v7.5")
+#  FASTAPI APP 
+app = FastAPI(title="SIG IGGA/ISA - Gestin Integral de Avisos v7.5")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:8000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Servir capas GeoJSON estáticas
+# Servir capas GeoJSON estticas
 try:
     app.mount("/capas", StaticFiles(directory=r"C:\Users\AlbertG\IGGA.SAS\PERSONAL\DEV\SIG-IGGA-AVISOS\capas"), name="capas")
 except Exception:
@@ -45,7 +51,7 @@ def get_db():
     finally:
         db.close()
 
-# ─── ENDPOINTS ────────────────────────────────────────────────────────────────
+#  ENDPOINTS 
 
 @app.get("/")
 def health_check():
@@ -53,11 +59,12 @@ def health_check():
     db = SessionLocal()
     try:
         count = db.query(Aviso).count()
-    except:
+    except Exception as e:
+        print(f"Healthcheck error: {e}")
         count = 0
     finally:
         db.close()
-    return {"status": "online", "db": "SQLite", "avisos": count, "timestamp": str(datetime.now())}
+    return {"status": "online", "db": "PostgreSQL (Supabase)", "avisos": count, "timestamp": str(datetime.now())}
 
 
 @app.post("/dev/seed")
@@ -72,21 +79,22 @@ def seed_database(db: Session = Depends(get_db)):
     if db.query(Dominio).count() == 0:
         dominios = [
             Dominio(codigo="INGRESADO",  tipo="workflow_status", valor="INGRESADO",  descripcion="Ingresado"),
-            Dominio(codigo="EN_GESTION", tipo="workflow_status", valor="EN_GESTION", descripcion="En Gestión de Campo"),
+            Dominio(codigo="EN_GESTION", tipo="workflow_status", valor="EN_GESTION", descripcion="En Gestin de Campo"),
             Dominio(codigo="VALIDAR_QA", tipo="workflow_status", valor="VALIDAR_QA", descripcion="Pendiente QA"),
             Dominio(codigo="APROBADO",   tipo="workflow_status", valor="APROBADO",   descripcion="Aprobado"),
             Dominio(codigo="CERRADO",    tipo="workflow_status", valor="CERRADO",    descripcion="Cerrado"),
-            Dominio(codigo="VEGETA",     tipo="gestion_type",    valor="VEGETACIÓN", descripcion="Gestión Vegetación"),
-            Dominio(codigo="CONSTRUC",   tipo="gestion_type",    valor="CONSTRUCCIÓN",descripcion="Gestión Construcción"),
+            Dominio(codigo="VEGETA",     tipo="gestion_type",    valor="VEGETACIN", descripcion="Gestin Vegetacin"),
+            Dominio(codigo="CONSTRUC",   tipo="gestion_type",    valor="CONSTRUCCIN",descripcion="Gestin Construccin"),
         ]
         for d in dominios:
             db.add(d)
         db.flush()
 
-    # ── Seed usuarios del sistema (roles IGGA reales) ──────────────────────────
+    #  Seed usuarios del sistema (roles IGGA reales) 
     from database.models import SystemUser
     if db.query(SystemUser).count() == 0:
         usuarios_base = [
+            SystemUser(username="agaviria",       full_name="Albert Gaviria",              email="agaviria@igga.com.co",     role="Administrador",             zona_ejecutora="NACIONAL"),
             SystemUser(username="admin",          full_name="Administrador Sistema",       email="admin@igga.com.co",        role="Administrador",             zona_ejecutora=None),
             SystemUser(username="coord_senior",   full_name="Coordinador Predial Senior",  email="coord.senior@igga.com.co", role="Coordinador Predial Senior", zona_ejecutora="NACIONAL"),
             SystemUser(username="coord_junior",   full_name="Coordinador Predial Junior",  email="coord.junior@igga.com.co", role="Coordinador Predial Junior", zona_ejecutora="NACIONAL"),
@@ -109,30 +117,24 @@ def seed_database(db: Session = Depends(get_db)):
         if excel_to_use:
             batch_id = ingesta.process_excel(excel_to_use, datetime.now(), "LOCAL_DATA_LOAD")
         else:
-            # Datos de demostración mínimos si no hay Excel
+            # Datos de demostracin mnimos si no hay Excel
             from generate_test_data import generate_dummy_geam
             dummy = "GEAM_SEED_TEMP.xlsx"
             generate_dummy_geam(dummy)
             batch_id = ingesta.process_excel(dummy, datetime.now(), "DEMO")
             os.remove(dummy)
 
-        # Notificación de bienvenida
-        if db.query(Notificacion).count() == 0:
-            db.add(Notificacion(
-                usuario="sistema",
-                titulo="🚀 Sistema Inicializado",
-                mensaje=f"Se cargaron {db.query(Aviso).count()} avisos desde {'Excel real' if use_real else 'datos demo'}.",
-                tipo="SUCCESS"
-            ))
-
         db.commit()
+        from database.models import Aviso
         return {
-            "message": f"✅ {'Excel real' if use_real else 'Demo'} cargado correctamente",
+            "message": "Carga completada",
             "batch_id": batch_id,
             "count": db.query(Aviso).count()
         }
+
     except Exception as e:
         import traceback
+        tb_str = traceback.format_exc()
         traceback.print_exc()
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error en seed: {str(e)}")
@@ -169,7 +171,7 @@ def get_aviso_comments(aviso_id: str, db: Session = Depends(get_db)):
 
 @app.post("/avisos/{aviso_id}/comments")
 async def add_aviso_comment(aviso_id: str, request: Request, db: Session = Depends(get_db)):
-    """Agrega un comentario/comunicación a un aviso. Registra usuario y timestamp."""
+    """Agrega un comentario/comunicacin a un aviso. Registra usuario y timestamp."""
     from database.models import AvisoComentario
     try:
         payload = await request.json()
@@ -177,7 +179,7 @@ async def add_aviso_comment(aviso_id: str, request: Request, db: Session = Depen
         payload = {}
     comentario_texto = str(payload.get("comentario", "")).strip()
     if not comentario_texto:
-        raise HTTPException(status_code=400, detail="El comentario no puede estar vacío")
+        raise HTTPException(status_code=400, detail="El comentario no puede estar vaco")
     comment = AvisoComentario(
         aviso_id=aviso_id,
         comentario=comentario_texto,
@@ -242,8 +244,8 @@ async def update_preferences(request: Request, db: Session = Depends(get_db)):
     return pref
 
 
-# ── ROLES DEL SISTEMA IGGA ────────────────────────────────────────────────────
-# Roles con permisos de modificar workflow/estado/asignación (RBAC field-level):
+#  ROLES DEL SISTEMA IGGA 
+# Roles con permisos de modificar workflow/estado/asignacin (RBAC field-level):
 WORKFLOW_ROLES = {"Oficina", "Analista Ambiental", "Coordinador Predial Junior", "Coordinador Predial Senior"}
 FIELD_ROLES    = {"Gestor de Campo", "Asistente Predial"}
 ALL_ROLES = sorted(WORKFLOW_ROLES | FIELD_ROLES | {"Administrador"})
@@ -288,7 +290,7 @@ async def create_user(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=409, detail="El usuario ya existe")
     role = str(payload.get("role", "Gestor de Campo")).strip()
     if role not in ALL_ROLES:
-        raise HTTPException(status_code=400, detail=f"Rol inválido. Opciones: {ALL_ROLES}")
+        raise HTTPException(status_code=400, detail=f"Rol invlido. Opciones: {ALL_ROLES}")
     user = SystemUser(
         username=username,
         full_name=str(payload.get("full_name", username.title())).strip(),
@@ -314,7 +316,7 @@ async def update_user(user_id: int, request: Request, db: Session = Depends(get_
     if "role" in payload:
         role = str(payload["role"]).strip()
         if role not in ALL_ROLES:
-            raise HTTPException(status_code=400, detail=f"Rol inválido")
+            raise HTTPException(status_code=400, detail=f"Rol invlido")
         user.role = role
     if "full_name" in payload:
         user.full_name = str(payload["full_name"]).strip()
@@ -328,13 +330,13 @@ async def update_user(user_id: int, request: Request, db: Session = Depends(get_
 
 @app.get("/avisos/{aviso_id}/ai-insight")
 def get_aviso_ai_insight(aviso_id: str, db: Session = Depends(get_db)):
-    """Genera un insight operativo determinístico basado en los datos del aviso."""
+    """Genera un insight operativo determinstico basado en los datos del aviso."""
     from database.models import Aviso
     aviso = db.query(Aviso).filter(Aviso.aviso == aviso_id).first()
     if not aviso:
         raise HTTPException(status_code=404, detail="Aviso no encontrado")
 
-    # Insight determinístico según variables de riesgo (sin IA externa)
+    # Insight determinstico segn variables de riesgo (sin IA externa)
     risk = aviso.risk_score or 0
     tipo = (aviso.tipo_de_gestion or "").upper()
     prio = (aviso.prioridad_fuente or "").upper()
@@ -344,22 +346,22 @@ def get_aviso_ai_insight(aviso_id: str, db: Session = Depends(get_db)):
     # Construir resumen
     if risk > 75:
         summary = (
-            f"Aviso #{aviso_id} presenta riesgo CRÍTICO (score {risk}/100). "
-            f"Prioridad fuente: {prio}. Intervención inmediata requerida."
+            f"Aviso #{aviso_id} presenta riesgo CRTICO (score {risk}/100). "
+            f"Prioridad fuente: {prio}. Intervencin inmediata requerida."
         )
         recommendation = (
-            "Escalar a Coordinador de Zona. Programar visita de campo en las próximas 48h. "
-            "Verificar distancia fase-tierra in situ y actualizar insumos fotográficos."
+            "Escalar a Coordinador de Zona. Programar visita de campo en las prximas 48h. "
+            "Verificar distancia fase-tierra in situ y actualizar insumos fotogrficos."
         )
     elif risk > 40:
         summary = (
-            f"Aviso #{aviso_id} en gestión con riesgo MEDIO (score {risk}/100). "
-            f"Estado actual: {estado}. Tipo de gestión: {tipo or 'No definido'}."
+            f"Aviso #{aviso_id} en gestin con riesgo MEDIO (score {risk}/100). "
+            f"Estado actual: {estado}. Tipo de gestin: {tipo or 'No definido'}."
         )
         recommendation = (
-            "Confirmar programación con gestor predial. "
+            "Confirmar programacin con gestor predial. "
             "Revisar disponibilidad de CAR si aplica control ambiental. "
-            "Actualizar estado en próxima visita semanal."
+            "Actualizar estado en prxima visita semanal."
         )
     else:
         summary = (
@@ -367,14 +369,14 @@ def get_aviso_ai_insight(aviso_id: str, db: Session = Depends(get_db)):
             f"Municipio: {aviso.municipio or 'N/D'}. Estado: {estado}."
         )
         recommendation = (
-            "Mantener seguimiento periódico. "
-            "Verificar documentación predial y compromisos vigentes. "
-            "Cerrar si gestión fue completada."
+            "Mantener seguimiento peridico. "
+            "Verificar documentacin predial y compromisos vigentes. "
+            "Cerrar si gestin fue completada."
         )
 
-    # Detalle adicional para vegetación
+    # Detalle adicional para vegetacin
     if "VEGETA" in tipo and dist is not None:
-        recommendation += f" Distancia copa-fase registrada: {dist}m — {'⚠️ Peligrosa (<2.5m)' if dist < 2.5 else '✅ Dentro de margen'}."
+        recommendation += f" Distancia copa-fase registrada: {dist}m  {' Peligrosa (<2.5m)' if dist < 2.5 else ' Dentro de margen'}."
 
     return {
         "aviso_id": aviso_id,
@@ -426,8 +428,8 @@ def validate_aviso_insumos(aviso_id: str, db: Session = Depends(get_db)):
     checks = [
         {"label": "Subcarpeta PREDIAL",          "ok": tiene_carpeta},
         {"label": "Subcarpeta INVENTARIO",        "ok": tiene_carpeta},
-        {"label": "Archivo KML / Geometría",      "ok": tiene_geom},
-        {"label": "Geometría dentro del Buffer",  "ok": (aviso.risk_score or 0) < 90},
+        {"label": "Archivo KML / Geometra",      "ok": tiene_geom},
+        {"label": "Geometra dentro del Buffer",  "ok": (aviso.risk_score or 0) < 90},
     ]
     passed = sum(1 for c in checks if c["ok"])
     return {
@@ -445,6 +447,116 @@ def get_aviso_history(aviso_id: str, db: Session = Depends(get_db)):
     return db.query(AvisoHistorial).filter(
         AvisoHistorial.aviso_id == aviso_id
     ).order_by(AvisoHistorial.created_at.desc()).all()
+
+
+#  ETL & CORTE AUTOMTICO 
+
+@app.post("/etl/sync-geam")
+async def sync_geam_corte(request: Request, db: Session = Depends(get_db)):
+    """
+    Sincronizacin Maestra del Corte Semanal (GEAM).
+    Solo accesible para el Administrador de Datos (Albert Gaviria).
+    """
+    from services.sharepoint_etl import SharePointETLService
+    from services.ingesta_service import IngestaService
+    
+    try:
+        payload = await request.json()
+    except:
+        payload = {}
+        
+    user_email = payload.get("email")
+    if user_email != "agaviria@igga.com.co":
+        raise HTTPException(
+            status_code=403, 
+            detail="ACCESO DENEGADO: Solo Albert Gaviria (agaviria@igga.com.co) puede autorizar sincronizaciones de corte maestro."
+        )
+    
+    try:
+        sp = SharePointETLService(
+            tenant_id=os.environ.get("AZURE_TENANT_ID"),
+            client_id=os.environ.get("AZURE_CLIENT_ID"),
+            client_secret=os.environ.get("AZURE_CLIENT_SECRET"),
+            site_id=os.environ.get("SHAREPOINT_SITE_ID")
+        )
+        
+        # 1. Buscar ltimo archivo de Viernes/Corte
+        latest = sp.scan_latest_file()
+        if not latest:
+            raise HTTPException(status_code=404, detail="No se encontr ningn archivo GEAM compatible en SharePoint")
+            
+        print(f"LOG: Iniciando descarga de: {latest.name}")
+        temp_file = f"temp_{latest.name}"
+        sp.download_file(latest.path, temp_file)
+        
+        # 2. Ingestar
+        ingesta = IngestaService(db)
+        batch_id = ingesta.process_excel(temp_file, latest.fecha_corte, f"SHAREPOINT: {latest.name}")
+        
+        # 3. Limpieza y Commit
+        if os.path.exists(temp_file):
+            os.remove(temp_file)
+            
+        db.commit()
+        return {
+            "status": "success",
+            "message": f"Corte {latest.name} sincronizado con xito.",
+            "batch_id": batch_id,
+            "filename": latest.name
+        }
+    except Exception as e:
+        db.rollback()
+        import traceback
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Fallo en Sincronizacin SharePoint: {str(e)}")
+
+
+@app.post("/etl/upload-geam")
+async def upload_geam_manual(
+    request: Request, 
+    db: Session = Depends(get_db)
+):
+    """
+    Carga manual de archivo GEAM .xlsx.
+    Restringido a Albert Gaviria.
+    """
+    from fastapi import UploadFile, File, Form
+    from services.ingesta_service import IngestaService
+    
+    # Nota: Usamos Form para el email ya que UploadFile cambia el tipo de contenido
+    # Pero para simplificar en este entorno, lo extraemos de los headers o query si es necesario.
+    # Usaremos un query param para el email en este caso simplificado.
+    user_email = request.query_params.get("email")
+    
+    if user_email != "agaviria@igga.com.co":
+         raise HTTPException(status_code=403, detail="Acceso denegado.")
+
+    form = await request.form()
+    file = form.get("file")
+    if not file or not isinstance(file, UploadFile):
+        raise HTTPException(status_code=400, detail="Archivo .xlsx requerido")
+
+    temp_path = f"manual_{file.filename}"
+    with open(temp_path, "wb") as f:
+        f.write(await file.read())
+    
+    try:
+        ingesta = IngestaService(db)
+        # Intentar extraer fecha del nombre
+        import re
+        match = re.search(r"(\d{2})_(\d{2})_(\d{4})", file.filename)
+        fecha = datetime.now()
+        if match:
+            dd, mm, yyyy = match.groups()
+            fecha = datetime(int(yyyy), int(mm), int(dd))
+            
+        batch_id = ingesta.process_excel(temp_path, fecha, f"MANUAL_UPLOAD: {file.filename}")
+        
+        db.commit()
+        return {"status": "success", "batch_id": batch_id, "filename": file.filename}
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
 
 
 if __name__ == "__main__":

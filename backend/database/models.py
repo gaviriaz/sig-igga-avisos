@@ -75,11 +75,12 @@ class Aviso(Base):
     fecha_reunion = Column(DateTime)
     compromisos = Column(Text)
     tipo_de_gestion = Column(String)
-    distancia_copa_fase = Column(Float)
+    # Estos campos son TEXT en la DB real para evitar fallos de conversion masivos
+    distancia_copa_fase = Column(String) 
     observacion_riesgo = Column(Text)
     especie_con_mas_riesgo = Column(String)
-    altura_individuo = Column(Float)
-    cantidad_arboles = Column(Integer)
+    altura_individuo = Column(String)
+    cantidad_arboles = Column(String)
     tipo_construccion = Column(String)
     valor_acuerdo_presupuesto = Column(Float)
     tipo_de_linea = Column(String)
@@ -108,11 +109,14 @@ class AvisoHistorial(Base):
 
 class Dominio(Base):
     __tablename__ = 'dominio'
-    codigo = Column(String, primary_key=True)
+    id = Column(Integer, primary_key=True)
+    codigo = Column(String)
     tipo = Column(String, index=True)
     valor = Column(String)
     descripcion = Column(String)
-    activo = Column(Boolean, default=True)
+    # Temporalmente comentamos activo si no existe en la DB
+    # activo = Column(Boolean, default=True)
+
 
 class Notificacion(Base):
     __tablename__ = 'notificacion'
@@ -144,14 +148,7 @@ class UserPreference(Base):
 
 
 class SystemUser(Base):
-    """
-    Usuarios del sistema SIG-IGGA-AVISOS.
-    Cubre +20 personas de oficina y +10 gestores de campo.
-    Roles: Administrador | Oficina | Analista Ambiental |
-           Coordinador Predial Junior | Coordinador Predial Senior |
-           Gestor de Campo | Asistente Predial
-    """
-    __tablename__ = 'system_user'
+    __tablename__ = 'app_system_user'
     id             = Column(Integer, primary_key=True, autoincrement=True)
     username       = Column(String, unique=True, index=True, nullable=False)
     full_name      = Column(String, nullable=False)

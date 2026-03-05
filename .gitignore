@@ -20,6 +20,14 @@ backend/test_debug.db
 # Logs
 *.log
 backend/backend_log*.txt
+backend/debug_output.txt
+backend/small_err.txt
+backend/small_log_v2.txt
+backend/fix_out.txt
+backend/cols_out.txt
+backend/backend_error.log
+backend/backend_log.txt
+backend/backend_log_new.txt
 
 # Variables de entorno y secretos
 .env
@@ -49,11 +57,12 @@ pnpm-debug.log*
 
 # Archivos de datos de prueba
 capas/*.xlsx
-backend/*_test_data.xlsx
+backend/*.xlsx
 backend/*_test_data.py
-backend/fix_out.txt
-backend/cols_out.txt
 
 # Archivos generados por el sistema operativo
 .DS_Store
 Thumbs.db
+
+# Temporary directory
+tmp/
