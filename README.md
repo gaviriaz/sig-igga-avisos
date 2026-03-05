@@ -50,4 +50,4 @@ Podrás acceder a la interfaz en `http://localhost:5173` y a la documentación d
 - Los archivos GeoJSON de gran tamaño se encuentran en la carpeta `capas/`.
 
 ---
-*Desarrollado para IGGA SAS*
+*Desarrollado para DGZ Enginnering*
