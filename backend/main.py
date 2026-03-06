@@ -122,13 +122,23 @@ def get_db():
 #  ENDPOINTS 
 
 def row_to_dict(row):
-    """Convierte un objeto SQLAlchemy en un dict serializable JSON."""
+    """Convierte un objeto SQLAlchemy o Row en un dict serializable JSON."""
     d = {}
-    for c in row.__table__.columns:
-        val = getattr(row, c.name)
-        if hasattr(val, 'isoformat'):
-            val = val.isoformat()
-        d[c.name] = val
+    
+    # Si es una instancia de modelo (objeto completo)
+    if hasattr(row, '__table__'):
+        for c in row.__table__.columns:
+            val = getattr(row, c.name)
+            if hasattr(val, 'isoformat'):
+                val = val.isoformat()
+            d[c.name] = val
+    # Si es un Row (resultado de una consulta selectiva)
+    else:
+        for key in row._fields:
+            val = getattr(row, key)
+            if hasattr(val, 'isoformat'):
+                val = val.isoformat()
+            d[key] = val
     return d
 
 @app.get("/debug")
@@ -315,12 +325,20 @@ def list_avisos(db: Session = Depends(get_db)):
         return cache_avisos["list"]
     
     with lock_avisos:
-        # Doble check de seguridad dentro del lock
         if "list" in cache_avisos:
             return cache_avisos["list"]
             
         from database.models import Aviso
-        rows = db.query(Aviso).all()
+        # SENIOR MASTER OPTIMIZATION: Solo traer columnas necesarias para el Listado/Mapa
+        essential_columns = [
+            Aviso.aviso, Aviso.denominacion, Aviso.municipio, 
+            Aviso.estado_workflow_interno, Aviso.risk_score, 
+            Aviso.not_presente_en_corte, Aviso.tipo_de_gestion,
+            Aviso.latitud_decimal, Aviso.longitud_decimal,
+            Aviso.prioridad_operativa
+        ]
+        
+        rows = db.query(*essential_columns).all()
         result = [row_to_dict(r) for r in rows]
         cache_avisos["list"] = result
         return result
@@ -328,6 +346,7 @@ def list_avisos(db: Session = Depends(get_db)):
 
 @app.get("/avisos/{aviso_id}")
 def get_aviso(aviso_id: str, db: Session = Depends(get_db)):
+    """Retorna el detalle COMPLETO de un aviso."""
     from database.models import Aviso
     aviso = db.query(Aviso).filter(Aviso.aviso == aviso_id).first()
     if not aviso:
