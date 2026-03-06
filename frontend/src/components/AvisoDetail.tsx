@@ -243,6 +243,25 @@ const AvisoDetail: React.FC = () => {
                 {currentTab === 'resumen' && (
                     <div className="space-y-6 animate-in fade-in duration-300">
 
+                        {/* 🛡️ Contrato de Datos: Priorización */}
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                            <div className="p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Prioridad Fuente (Sist.)</p>
+                                <span className="px-2 py-0.5 bg-slate-700 text-slate-400 rounded text-[10px] font-bold uppercase">
+                                    {selectedAviso.prioridad_fuente || selectedAviso.prioridad || 'BAJA'}
+                                </span>
+                            </div>
+                            <div className="p-4 bg-indigo-500/5 rounded-2xl border border-indigo-500/20 shadow-lg shadow-indigo-600/5">
+                                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Prioridad Operativa (IGGA)</p>
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${selectedAviso.prioridad_operativa === 'MUY ALTA' ? 'bg-rose-500/20 text-rose-400' :
+                                        selectedAviso.prioridad_operativa === 'ALTA' ? 'bg-amber-500/20 text-amber-400' :
+                                            'bg-indigo-500/20 text-indigo-400'
+                                    }`}>
+                                    {selectedAviso.prioridad_operativa || 'BAJA'}
+                                </span>
+                            </div>
+                        </div>
+
                         {/* Tarjeta de IA Soft */}
                         <div className="p-6 bg-indigo-500/5 border border-indigo-500/10 rounded-2xl relative">
                             <div className="flex items-center gap-2 mb-3">
