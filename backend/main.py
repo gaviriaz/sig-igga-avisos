@@ -479,6 +479,15 @@ def get_users_list(db: Session = Depends(get_db)):
     """Backend endpoint para listar usuarios en el frontend."""
     return list_users(db)
 
+@app.get("/stats/strategic")
+def get_strategic_dashboard(db: Session = Depends(get_db)):
+    """
+    Endpoint para el Módulo de Dashboard Estratégico.
+    Retorna métricas de alto nivel para gestión de oficina (Senior Master).
+    """
+    from services.analytics_service import AnalyticsService
+    return AnalyticsService(db).get_strategic_stats()
+
 @app.get("/users/roles")
 def list_roles():
     """Retorna los roles disponibles del sistema para selectores en formularios."""
@@ -603,9 +612,23 @@ def get_aviso_ai_insight(aviso_id: str, db: Session = Depends(get_db)):
 
 
 @app.patch("/avisos/{aviso_id}/state")
-def update_aviso_state(aviso_id: str, new_state: str, db: Session = Depends(get_db)):
-    """Actualiza el estado de workflow interno del aviso y registra en historial."""
+def update_aviso_state(
+    aviso_id: str, 
+    new_state: str, 
+    db: Session = Depends(get_db),
+    user: AuthUser = Depends(get_current_user)
+):
+    """
+    Actualiza el estado de workflow y tipo_status.
+    Senior Master: Protegido por RBAC (Criterio 4.3).
+    """
     from database.models import Aviso, AvisoHistorial
+    
+    # 1. Seguridad: Solo roles de Oficina/Coordinador pueden cambiar estados
+    is_high_role = user.role in ['Oficina', 'Analista Ambiental', 'Coordinador Predial Senior']
+    if not is_high_role:
+        raise HTTPException(status_code=403, detail="No tienes permisos para cambiar estados de gestión")
+
     aviso = db.query(Aviso).filter(Aviso.aviso == aviso_id).first()
     if not aviso:
         raise HTTPException(status_code=404, detail="Aviso no encontrado")
@@ -614,15 +637,21 @@ def update_aviso_state(aviso_id: str, new_state: str, db: Session = Depends(get_
     if old_state == new_state:
         return {"ok": True, "message": "Sin cambios", "estado": new_state}
 
+    # 2. Sincronizar ambos campos de estado
     aviso.estado_workflow_interno = new_state
+    aviso.tipo_status = new_state
+    
+    # 3. Registrar con campos correctos del modelo
     db.add(AvisoHistorial(
         aviso=aviso_id,
         campo="estado_workflow_interno",
         valor_anterior=old_state,
         valor_nuevo=new_state,
         batch_id="MANUAL",
-        usuario="Operador"
+        usuario_id=user.user_id,
+        rol=user.role
     ))
+    
     db.commit()
     return {"ok": True, "aviso_id": aviso_id, "estado_anterior": old_state, "estado": new_state}
 
