@@ -220,10 +220,7 @@ def list_avisos(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/users")
-def get_users_list(db: Session = Depends(get_db)):
-    """Alias para /users/all usado por el frontend."""
-    return list_users(db)
+@app.get("/avisos")
 
 @app.get("/avisos/{aviso_id}")
 def get_aviso(aviso_id: str, db: Session = Depends(get_db)):
@@ -388,6 +385,11 @@ def list_users(db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@app.get("/users")
+def get_users_list(db: Session = Depends(get_db)):
+    """Backend endpoint para listar usuarios en el frontend."""
+    return list_users(db)
 
 @app.get("/users/roles")
 def list_roles():
