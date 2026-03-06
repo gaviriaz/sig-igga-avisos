@@ -10,6 +10,7 @@ import uvicorn
 from dotenv import load_dotenv
 from cachetools import TTLCache
 import time
+import threading
 
 load_dotenv()
 
@@ -38,11 +39,15 @@ from database.models import Base
 app = FastAPI(title="SIG IGGA/ISA - Gestion Integral de Avisos v7.5")
 
 # --- CAPA DE CACHÉ ESTRATÉGICA (Para soportar 30+ usuarios en Render Free) ---
-# maxsize=1 porque guardamos un solo objeto (la lista/dict completo)
-cache_avisos = TTLCache(maxsize=1, ttl=30)       # Lista de avisos (30 seg)
-cache_stats = TTLCache(maxsize=1, ttl=60)        # Dashboard (60 seg)
-cache_users = TTLCache(maxsize=1, ttl=300)       # Usuarios (5 min)
-cache_domains = TTLCache(maxsize=200, ttl=3600)  # Dominios individuales (1 hora)
+cache_avisos = TTLCache(maxsize=1, ttl=30)
+cache_stats = TTLCache(maxsize=1, ttl=60)
+cache_users = TTLCache(maxsize=1, ttl=300)
+cache_domains = TTLCache(maxsize=200, ttl=3600)
+
+# Locks para evitar 'Thundering Herd' (Sincronización de acceso a DB)
+lock_avisos = threading.Lock()
+lock_stats = threading.Lock()
+lock_domains = threading.Lock()
 # ----------------------------------------------------------------------------
 
 ALLOWED = os.environ.get("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,https://sig-igga.pages.dev").split(",")
@@ -57,6 +62,21 @@ app.add_middleware(
 
 # Compresión Gzip: Reduce el tamaño de los JSON masivos (Crucial para plan Render Free)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# --- EVENTO STARTUP: Pre-warming de Caché (Senior Strategy) ---
+@app.on_event("startup")
+async def startup_event():
+    def warm_cache():
+        print("🔥 [Startup] Pre-warming Cache...")
+        try:
+            db = SessionLocal()
+            list_avisos(db)
+            get_strategic_dashboard(db)
+            db.close()
+            print("✅ [Startup] Cache warmed successfully.")
+        except Exception as e:
+            print(f"❌ [Startup] Cache warming failed: {e}")
+    threading.Thread(target=warm_cache, daemon=True).start()
 
 # Handler global: garantiza CORS headers incluso en errores 500
 from fastapi.responses import JSONResponse
@@ -277,11 +297,16 @@ def list_domain_values(domain_key: str, db: Session = Depends(get_db)):
     """Obtiene los valores de un dominio catastrado (dom_*)."""
     if domain_key in cache_domains:
         return cache_domains[domain_key]
-        
-    from services.domain_service import DomainService
-    result = DomainService(db).get_domain_values(domain_key)
-    cache_domains[domain_key] = result
-    return result
+    
+    with lock_domains:
+        # Doble check dentro del lock
+        if domain_key in cache_domains:
+            return cache_domains[domain_key]
+            
+        from services.domain_service import DomainService
+        result = DomainService(db).get_domain_values(domain_key)
+        cache_domains[domain_key] = result
+        return result
 
 
 @app.get("/avisos")
@@ -289,11 +314,16 @@ def list_avisos(db: Session = Depends(get_db)):
     if "list" in cache_avisos:
         return cache_avisos["list"]
     
-    from database.models import Aviso
-    rows = db.query(Aviso).all()
-    result = [row_to_dict(r) for r in rows]
-    cache_avisos["list"] = result
-    return result
+    with lock_avisos:
+        # Doble check de seguridad dentro del lock
+        if "list" in cache_avisos:
+            return cache_avisos["list"]
+            
+        from database.models import Aviso
+        rows = db.query(Aviso).all()
+        result = [row_to_dict(r) for r in rows]
+        cache_avisos["list"] = result
+        return result
 
 
 @app.get("/avisos/{aviso_id}")
@@ -528,10 +558,14 @@ def get_strategic_dashboard(db: Session = Depends(get_db)):
     if "dashboard" in cache_stats:
         return cache_stats["dashboard"]
         
-    from services.analytics_service import AnalyticsService
-    result = AnalyticsService(db).get_strategic_stats()
-    cache_stats["dashboard"] = result
-    return result
+    with lock_stats:
+        if "dashboard" in cache_stats:
+            return cache_stats["dashboard"]
+            
+        from services.analytics_service import AnalyticsService
+        result = AnalyticsService(db).get_strategic_stats()
+        cache_stats["dashboard"] = result
+        return result
 
 @app.get("/users/roles")
 def list_roles():
