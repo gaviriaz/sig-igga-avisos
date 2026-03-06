@@ -622,38 +622,47 @@ def update_aviso_state(
     Actualiza el estado de workflow y tipo_status.
     Senior Master: Protegido por RBAC (Criterio 4.3).
     """
-    from database.models import Aviso, AvisoHistorial
-    
-    # 1. Seguridad: Solo roles de Oficina/Coordinador pueden cambiar estados
-    is_high_role = user.role in ['Oficina', 'Analista Ambiental', 'Coordinador Predial Senior']
-    if not is_high_role:
-        raise HTTPException(status_code=403, detail="No tienes permisos para cambiar estados de gestión")
+    import traceback
+    try:
+        from database.models import Aviso, AvisoHistorial
+        
+        # 1. Seguridad: Solo roles de Oficina/Coordinador pueden cambiar estados
+        is_high_role = user.role in ['Oficina', 'Analista Ambiental', 'Coordinador Predial Senior', 'Administrador']
+        if not is_high_role:
+            raise HTTPException(status_code=403, detail=f"No tienes permisos para cambiar estados. Tu rol: {user.role}")
 
-    aviso = db.query(Aviso).filter(Aviso.aviso == aviso_id).first()
-    if not aviso:
-        raise HTTPException(status_code=404, detail="Aviso no encontrado")
+        aviso = db.query(Aviso).filter(Aviso.aviso == aviso_id).first()
+        if not aviso:
+            raise HTTPException(status_code=404, detail="Aviso no encontrado")
 
-    old_state = aviso.estado_workflow_interno or "INGRESADO"
-    if old_state == new_state:
-        return {"ok": True, "message": "Sin cambios", "estado": new_state}
+        old_state = aviso.estado_workflow_interno or "INGRESADO"
+        if old_state == new_state:
+            return {"ok": True, "message": "Sin cambios", "estado": new_state}
 
-    # 2. Sincronizar ambos campos de estado
-    aviso.estado_workflow_interno = new_state
-    aviso.tipo_status = new_state
-    
-    # 3. Registrar con campos correctos del modelo
-    db.add(AvisoHistorial(
-        aviso=aviso_id,
-        campo="estado_workflow_interno",
-        valor_anterior=old_state,
-        valor_nuevo=new_state,
-        batch_id="MANUAL",
-        usuario_id=user.user_id,
-        rol=user.role
-    ))
-    
-    db.commit()
-    return {"ok": True, "aviso_id": aviso_id, "estado_anterior": old_state, "estado": new_state}
+        # 2. Sincronizar ambos campos de estado
+        aviso.estado_workflow_interno = new_state
+        aviso.tipo_status = new_state
+        
+        # 3. Registrar con campos correctos del modelo
+        db.add(AvisoHistorial(
+            aviso=aviso_id,
+            campo="estado_workflow_interno",
+            valor_anterior=old_state,
+            valor_nuevo=new_state,
+            batch_id="MANUAL",
+            usuario_id=user.user_id,
+            rol=user.role
+        ))
+        
+        db.commit()
+        return {"ok": True, "aviso_id": aviso_id, "estado_anterior": old_state, "estado": new_state}
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        error_msg = f"ERROR INTERNO: {str(e)}\n{traceback.format_exc()}"
+        print(error_msg)
+        raise HTTPException(status_code=500, detail=error_msg)
 
 
 @app.post("/avisos/{aviso_id}/validate-insumos")

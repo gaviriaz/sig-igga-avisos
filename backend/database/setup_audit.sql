@@ -1,3 +1,34 @@
+-- 0. ASEGURAR COLUMNAS EN TABLA AVISO (Migración Progresiva)
+ALTER TABLE aviso ADD COLUMN IF NOT EXISTS prioridad_fuente TEXT;
+
+ALTER TABLE aviso ADD COLUMN IF NOT EXISTS prioridad_operativa TEXT;
+
+ALTER TABLE aviso
+ADD COLUMN IF NOT EXISTS estado_workflow_interno TEXT;
+
+ALTER TABLE aviso ADD COLUMN IF NOT EXISTS tipo_status TEXT;
+
+ALTER TABLE aviso ADD COLUMN IF NOT EXISTS reprogramacion TEXT;
+
+ALTER TABLE aviso ADD COLUMN IF NOT EXISTS justificacion_repro TEXT;
+
+ALTER TABLE aviso
+ADD COLUMN IF NOT EXISTS risk_score INTEGER DEFAULT 0;
+
+ALTER TABLE aviso ADD COLUMN IF NOT EXISTS status_usuario TEXT;
+
+ALTER TABLE aviso ADD COLUMN IF NOT EXISTS status_sistema TEXT;
+
+ALTER TABLE aviso
+ADD COLUMN IF NOT EXISTS ruta_insumos_onedrive TEXT;
+
+ALTER TABLE aviso ADD COLUMN IF NOT EXISTS assigned_to TEXT;
+
+ALTER TABLE aviso ADD COLUMN IF NOT EXISTS assigned_to_name TEXT;
+
+ALTER TABLE aviso
+ADD COLUMN IF NOT EXISTS not_presente_en_corte BOOLEAN DEFAULT FALSE;
+
 -- 1. CONFIGURACIÓN DE BUFFERS POR TIPO DE GESTIÓN
 CREATE TABLE IF NOT EXISTS cfg_kml_buffer_por_tipo_gestion (
     tipo_gestion TEXT PRIMARY KEY,
