@@ -211,14 +211,36 @@ def seed_database(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Error en seed: {str(e)}")
 
 
+@app.post("/avisos/{aviso_id}/validate-insumos")
+async def validate_insumos(aviso_id: str, db: Session = Depends(get_db)):
+    """
+    Orquestador de validación de insumos (KML + OneDrive).
+    Senior Master: Combina validación espacial con auditoría de archivos.
+    """
+    from services.kml_validator import KMLValidatorService
+    from services.onedrive_service import OneDriveInsumosService
+    
+    # 1. Validar Capas/KML (Simulado si no hay KML actual para pruebas)
+    # En producción esto extraería el KML de OneDrive primero
+    # Por ahora usaremos datos de prueba o el último resultado
+    kml_svc = KMLValidatorService(db)
+    # Validamos con un geojson vacío solo para activar la lógica de DB
+    kml_result = kml_svc.validate_proximity(aviso_id, {"type": "FeatureCollection", "features": []})
+    
+    # 2. Retornar status unificado
+    return {
+        "aviso": aviso_id,
+        "kml_status": kml_result,
+        "onedrive_status": "PENDIENTE_AUTH_MS_GRAPH",
+        "timestamp": datetime.now()
+    }
+
+
 @app.get("/domains/{domain_key}")
 def list_domain_values(domain_key: str, db: Session = Depends(get_db)):
-    from database.models import Dominio
-    try:
-        rows = db.query(Dominio).filter(Dominio.tipo == domain_key).all()
-        return [row_to_dict(r) for r in rows]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    """Obtiene los valores de un dominio catastrado (dom_*)."""
+    from services.domain_service import DomainService
+    return DomainService(db).get_domain_values(domain_key)
 
 
 @app.get("/avisos")
