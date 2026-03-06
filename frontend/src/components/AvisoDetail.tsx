@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAvisoStore } from '../store/useAvisoStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { supabase } from '../lib/supabase';
 import { getApiUrl } from '../config/api';
 import {
     Zap, MapPin, Loader2, AlertTriangle, CheckCircle2, Clock,
@@ -71,9 +72,13 @@ const AvisoDetail: React.FC = () => {
         if (!selectedAviso) return;
         setIsUpdating(true);
         try {
+            const { data: { session } } = await supabase.auth.getSession();
             const baseUrl = await getApiUrl();
             const res = await fetch(`${baseUrl}/avisos/${selectedAviso.aviso}/state?new_state=${newState}`, {
-                method: 'PATCH'
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${session?.access_token || ''}`
+                }
             });
             if (res.ok) {
                 updateAviso(selectedAviso.aviso, { estado_workflow_interno: newState, tipo_status: newState });
@@ -112,10 +117,14 @@ const AvisoDetail: React.FC = () => {
         if (!newComment.trim() || !selectedAviso) return;
         setIsSending(true);
         try {
+            const { data: { session } } = await supabase.auth.getSession();
             const baseUrl = await getApiUrl();
             const res = await fetch(`${baseUrl}/avisos/${selectedAviso.aviso}/comments`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.access_token || ''}`
+                },
                 body: JSON.stringify({
                     comentario: newComment,
                     usuario: profile?.full_name || "Desconocido"
@@ -136,8 +145,14 @@ const AvisoDetail: React.FC = () => {
         if (!selectedAviso) return;
         setValidating(true);
         try {
+            const { data: { session } } = await supabase.auth.getSession();
             const baseUrl = await getApiUrl();
-            const res = await fetch(`${baseUrl}/avisos/${selectedAviso.aviso}/validate-insumos`, { method: 'POST' });
+            const res = await fetch(`${baseUrl}/avisos/${selectedAviso.aviso}/validate-insumos`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${session?.access_token || ''}`
+                }
+            });
             const data = await res.json();
             setValResult(data);
         } catch (e) {
@@ -254,8 +269,8 @@ const AvisoDetail: React.FC = () => {
                             <div className="p-4 bg-indigo-500/5 rounded-2xl border border-indigo-500/20 shadow-lg shadow-indigo-600/5">
                                 <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Prioridad Operativa (IGGA)</p>
                                 <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${selectedAviso.prioridad_operativa === 'MUY ALTA' ? 'bg-rose-500/20 text-rose-400' :
-                                        selectedAviso.prioridad_operativa === 'ALTA' ? 'bg-amber-500/20 text-amber-400' :
-                                            'bg-indigo-500/20 text-indigo-400'
+                                    selectedAviso.prioridad_operativa === 'ALTA' ? 'bg-amber-500/20 text-amber-400' :
+                                        'bg-indigo-500/20 text-indigo-400'
                                     }`}>
                                     {selectedAviso.prioridad_operativa || 'BAJA'}
                                 </span>
