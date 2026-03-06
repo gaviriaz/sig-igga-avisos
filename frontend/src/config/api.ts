@@ -34,8 +34,8 @@ export const getApiUrl = async () => {
         console.warn('Auto-Discovery failed, using generic fallback.');
     }
 
-    // Si todo falla, asumimos que el backend corre localmente
-    return 'http://localhost:8000';
+    // Si todo falla, priorizamos el backend en la nube (Render)
+    return 'https://sig-igga-avisos.onrender.com';
 };
 
 // Mantenemos la constante para compatibilidad, pero marcada como legacy
