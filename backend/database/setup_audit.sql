@@ -66,7 +66,8 @@ BEGIN
             created_at TIMESTAMPTZ DEFAULT now()
         )', dom_name);
         
-        -- SENIOR FIX: Asegurar que la columna existe incluso si la tabla se creó sin ella antes
+        -- ULTRA FIX: Asegurar columnas críticas por si la tabla ya existía con otro esquema
+        EXECUTE format('ALTER TABLE dom_%I ADD COLUMN IF NOT EXISTS valor TEXT', dom_name);
         EXECUTE format('ALTER TABLE dom_%I ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT TRUE', dom_name);
     END LOOP;
 END $$;
