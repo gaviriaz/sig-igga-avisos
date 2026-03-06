@@ -47,13 +47,13 @@ export default defineConfig({
                         }
                     },
                     {
-                        urlPattern: /^http:\/\/localhost:8000\/.*/i,
+                        urlPattern: /^https:\/\/sig-igga-avisos\.onrender\.com\/.*/i,
                         handler: 'NetworkFirst',
                         options: {
-                            cacheName: 'backend-api-cache',
+                            cacheName: 'render-backend-cache',
                             expiration: {
-                                maxEntries: 200,
-                                maxAgeSeconds: 60 * 60 * 24 // 1 día
+                                maxEntries: 500,
+                                maxAgeSeconds: 60 * 60 * 24 * 3 // 3 días
                             },
                             cacheableResponse: {
                                 statuses: [0, 200]

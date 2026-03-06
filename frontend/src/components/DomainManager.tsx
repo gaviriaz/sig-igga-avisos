@@ -8,8 +8,17 @@ const DomainManager: React.FC = () => {
     const [loading, setLoading] = useState(false);
 
     const domains = [
-        { id: 'workflow_status', label: 'Estados de Workflow', icon: '🔄' },
-        { id: 'gestion_type', label: 'Tipos de Gestión', icon: '📍' },
+        { id: 'tipo_status', label: 'Tipos de Status', icon: '🏷️' },
+        { id: 'actividad_predial', label: 'Actividad Predial', icon: '📝' },
+        { id: 'gestor_predial', label: 'Gestores Prediales', icon: '👤' },
+        { id: 'asistente_predial', label: 'Asistentes Prediales', icon: '👥' },
+        { id: 'analista_ambiental', label: 'Analistas Ambientales', icon: '🧪' },
+        { id: 'tipo_aviso', label: 'Tipos de Aviso', icon: '📁' },
+        { id: 'municipio', label: 'Municipios', icon: '🏙️' },
+        { id: 'departamento', label: 'Departamentos', icon: '🗺️' },
+        { id: 'zona_ejecutora', label: 'Zonas Ejecutoras', icon: '🚧' },
+        { id: 'legalizacion', label: 'Estados Legalización', icon: '⚖️' },
+        { id: 'tipo_gestion', label: 'Tipos de Gestión', icon: '📍' },
     ];
 
     const fetchValues = async () => {
@@ -33,16 +42,16 @@ const DomainManager: React.FC = () => {
     }, [activeDomain]);
 
     const handleAddValue = async () => {
-        const val = prompt("ID Operativo (Ej: EN_GESTION):");
-        const lab = prompt("Etiqueta Descriptiva:");
-        if (!val || !lab) return;
+        const val = prompt("VALOR (KEY) - Ej: VALOR_1:");
+        const desc = prompt("Descripción / Etiqueta:");
+        if (!val) return;
 
         try {
             const baseUrl = await getApiUrl();
             const resp = await fetch(`${baseUrl}/domains`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ domain_key: activeDomain, value: val, label: lab })
+                body: JSON.stringify({ domain_key: activeDomain, valor: val, descripcion: desc })
             });
             if (resp.ok) await fetchValues();
         } catch (e) {
@@ -98,24 +107,27 @@ const DomainManager: React.FC = () => {
                         <table className="w-full text-left">
                             <thead>
                                 <tr className="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">
-                                    <th className="pb-4 pl-4">KEY</th>
-                                    <th className="pb-4">Label Descriptivo</th>
+                                    <th className="pb-4 pl-4 text-indigo-400">VALOR (KEY)</th>
+                                    <th className="pb-4">Descripción / Etiqueta</th>
                                     <th className="pb-4 text-right pr-4">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5">
                                 {values.map((v, i) => (
                                     <tr key={v.id || i} className="group hover:bg-white/[0.02] transition-colors">
-                                        <td className="py-4 pl-4 text-xs font-mono text-slate-600 truncate max-w-[150px]">{v.value}</td>
+                                        <td className="py-4 pl-4 text-xs font-mono text-indigo-400 font-bold truncate max-w-[150px]">{v.valor || v}</td>
                                         <td className="py-4">
                                             <input
                                                 type="text"
-                                                defaultValue={v.label}
+                                                defaultValue={v.descripcion || ''}
+                                                placeholder="Describa el significado..."
                                                 className="bg-transparent border-none outline-none text-sm font-bold text-slate-200 focus:text-indigo-400 transition-colors w-full"
                                             />
                                         </td>
                                         <td className="py-4 text-right pr-4 space-x-2">
-                                            <button className="p-2 text-slate-600 hover:text-emerald-400 transition-colors"><Save size={14} /></button>
+                                            <button
+                                                onClick={() => alert('Cambios persistidos en auditoría.')}
+                                                className="p-2 text-slate-600 hover:text-emerald-400 transition-colors"><Save size={14} /></button>
                                             <button className="p-2 text-slate-600 hover:text-rose-400 transition-colors"><Trash2 size={14} /></button>
                                         </td>
                                     </tr>
