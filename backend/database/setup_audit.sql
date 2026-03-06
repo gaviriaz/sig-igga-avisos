@@ -65,6 +65,9 @@ BEGIN
             activo BOOLEAN DEFAULT TRUE,
             created_at TIMESTAMPTZ DEFAULT now()
         )', dom_name);
+        
+        -- SENIOR FIX: Asegurar que la columna existe incluso si la tabla se creó sin ella antes
+        EXECUTE format('ALTER TABLE dom_%I ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT TRUE', dom_name);
     END LOOP;
 END $$;
 

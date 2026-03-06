@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { supabase } from '../lib/supabase';
 
 export interface Aviso {
@@ -160,7 +160,10 @@ export const useAvisoStore = create<AvisoState>()(
         }),
         {
             name: 'aviso-storage',
-            partialize: (state) => ({ avisos: state.avisos, filteredAvisos: state.filteredAvisos }),
+            storage: createJSONStorage(() => sessionStorage),
+            partialize: (state) => ({
+                selectedAviso: state.selectedAviso
+            }),
         }
     )
 );
