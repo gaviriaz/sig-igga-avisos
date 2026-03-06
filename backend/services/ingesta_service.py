@@ -10,103 +10,106 @@ class IngestaService:
     def __init__(self, db: Session):
         self.db = db
 
-    def process_excel(self, file_path: str, fecha_corte: datetime, source_name: str):
+    def process_excel(self, file_path: str, fecha_corte: datetime, source_name: str = "SYSTEM"):
         """
         Procesa el Excel de IGGA y realiza la ingesta RAW y Normalizada.
+        Implementación Senior Master: Trazabilidad total y Contrato de Datos.
         """
-        print(f"DEBUG: Leyendo Excel {file_path}")
-        df = pd.read_excel(file_path)
+        print(f"DEBUG: Iniciando Ingesta de {file_path}")
+        try:
+            df = pd.read_excel(file_path)
+            df.columns = [c.strip() for c in df.columns]
+        except Exception as e:
+            raise Exception(f"No se pudo leer el archivo Excel: {str(e)}")
         
-        # Generar ID de lote
+        # 1. Crear Batch de Importación
         batch_id = str(uuid.uuid4())
         batch = ImportBatch(
             batch_id=batch_id,
             fecha_corte=fecha_corte,
             anio=fecha_corte.year,
             mes=str(fecha_corte.month),
-            file_name=file_path.split("/")[-1],
+            file_name=file_path.split("/")[-1] if "/" in file_path else file_path.split("\\")[-1],
             filas_procesadas=len(df),
-            estado='SUCCESS'
+            estado='PROCESSING'
         )
         self.db.add(batch)
         self.db.flush()
 
-        count_new = 0
-        count_updated = 0
-
-        # Mapeo de columnas Excel -> Modelo (Normalización)
-        # Adaptado a la tabla operativa del prompt
-        mapping = {
-            "Aviso": "aviso",
-            "Prioridad": "prioridad_fuente",
-            "Clase de aviso": "clase_aviso",
-            "Zona trabajo": "zona_trabajo",
-            "Ubicac.técnica": "ubicacion_tecnica",
-            "Sector": "sector",
-            "Denominación": "denominacion",
-            "Descripción": "descripcion",
-            "Fecha de aviso": "fecha_aviso",
-            "Fin deseado": "fin_deseado",
-            "Status usuario": "status_usuario",
-            "Autor del aviso": "autor_aviso",
-            "Pto.tbjo.resp.": "pto_trabajo_resp",
-            "TIPO STATUS": "tipo_status",
-            "TIPO DE LINEA": "tipo_de_linea",
-            "MUNICIPIO": "municipio",
-            "DEPARTAMENTO": "departamento",
-            "LONGITUD (DEC)": "longitud_decimal",
-            "LATITUD (DEC)": "latitud_decimal",
-            "ZONA EJECUTORA": "zona_ejecutora",
-            "GESTOR PREDIAL": "gestor_predial",
-            "ASISTENTE PREDIAL": "asistente_predial",
-            "ANALISTA AMBIENTAL": "analista_ambiental",
-            "TIPO AVISO": "tipo_aviso",
-            "TIPO DE GESTIÓN": "tipo_de_gestion",
-            "REPROGRAMACIÓN": "reprogramacion",
-            "JUSTIFICACIÓN REPRO": "justificacion_repro",
-            "DISTANCIA COPA - FASE Ó FASE TIERRA": "distancia_copa_fase",
-            "ALTURA INDIVIDUO": "altura_individuo",
-            "CANTIDAD DE ARBOLES": "cantidad_arboles"
-        }
-
+        records_processed = 0
         for _, row in df.iterrows():
-            aviso_id = str(row.get("Aviso")).strip()
-            if not aviso_id or aviso_id == "nan":
+            try:
+                aviso_id = str(row.get('Aviso'))
+                if not aviso_id or aviso_id == 'nan':
+                    continue
+
+                # 2. Guardar Snapshot RAW (Inmutable)
+                # Convertimos a dict y manejamos NaNs para el JSON
+                row_dict = row.to_dict()
+                clean_row = {k: (None if pd.isna(v) else v) for k, v in row_dict.items()}
+                
+                self.db.execute(text("""
+                    INSERT INTO avisos_raw (aviso_id, batch_id, raw_content, created_at)
+                    VALUES (:aviso, :batch, :raw, :now)
+                """), {
+                    "aviso": aviso_id,
+                    "batch": batch_id,
+                    "raw": json.dumps(clean_row),
+                    "now": datetime.now()
+                })
+
+                # 3. Mapeo Normalizado (Contrato de Datos)
+                prioridad_f = str(row.get('Prioridad', 'BAJA'))
+                
+                aviso_data = {
+                    "aviso": aviso_id,
+                    "prioridad_fuente": prioridad_f,
+                    "prioridad_operativa": prioridad_f, 
+                    "clase_aviso": str(row.get('Clase de aviso')) if pd.notna(row.get('Clase de aviso')) else None,
+                    "denominacion": str(row.get('Denominación')) if pd.notna(row.get('Denominación')) else None,
+                    "descripcion": str(row.get('Descripción')) if pd.notna(row.get('Descripción')) else None,
+                    "zona_trabajo": str(row.get('Zona trabajo')) if pd.notna(row.get('Zona trabajo')) else None,
+                    "ubicacion_tecnica": str(row.get('Ubicac.técnica')) if pd.notna(row.get('Ubicac.técnica')) else None,
+                    "sector": str(row.get('Sector')) if pd.notna(row.get('Sector')) else None,
+                    "municipio": str(row.get('Municipio')) if pd.notna(row.get('Municipio')) else None,
+                    "departamento": str(row.get('Departamento')) if pd.notna(row.get('Departamento')) else None,
+                    "latitud_decimal": row.get('LATITUD (DEC)') if pd.notna(row.get('LATITUD (DEC)')) else None,
+                    "longitud_decimal": row.get('LONGITUD (DEC)') if pd.notna(row.get('LONGITUD (DEC)')) else None,
+                    "estado_workflow_interno": "INGRESADO",
+                    "tipo_status": str(row.get('TIPO STATUS', 'VALIDAR')),
+                    "gestor_predial": str(row.get('GESTOR PREDIAL')) if pd.notna(row.get('GESTOR PREDIAL')) else None,
+                    "tipo_de_gestion": str(row.get('TIPO DE GESTIÓN')) if pd.notna(row.get('TIPO DE GESTIÓN')) else None,
+                    "batch_id_actual": batch_id,
+                    "not_presente_en_corte": False,
+                    "fecha_ultimo_corte_visto": fecha_corte,
+                    "updated_at": datetime.now()
+                }
+
+                # 4. Cálculo de Riesgo Inicial
+                from services.risk_service import RiskScoreService
+                risk_svc = RiskScoreService()
+                risk_data = risk_svc.calculate_risk(aviso_data)
+                aviso_data.update(risk_data)
+
+                # UPSERT en tabla operativa
+                self._upsert_aviso(aviso_data)
+                records_processed += 1
+
+            except Exception as e:
+                print(f"WARN: Error procesando fila {row.get('Aviso')}: {str(e)}")
                 continue
-
-            # 1. Guardar en RAW (Inmutable)
-            raw_entry = AvisosRaw(
-                batch_id=batch_id,
-                aviso=aviso_id,
-                payload=row.to_dict()
-            )
-            self.db.add(raw_entry)
-
-            # 2. Upsert en NORMALIZADA (aviso)
-            aviso_obj = self.db.query(Aviso).filter(Aviso.aviso == aviso_id).first()
-            is_new = False
-            if not aviso_obj:
-                aviso_obj = Aviso(aviso=aviso_id)
-                self.db.add(aviso_obj)
-                is_new = True
-                count_new += 1
-            else:
-                count_updated += 1
-
-            # Actualizar campos dinámicamente según mapeo
-            for excel_col, model_attr in mapping.items():
-                if excel_col in row:
-                    val = row[excel_col]
-                    # Limpieza básica de NaN
-                    if pd.isna(val):
-                        val = None
-                    setattr(aviso_obj, model_attr, val)
-
-            # Camper operativos extra
-            aviso_obj.batch_id_actual = batch_id
-            aviso_obj.not_presente_en_corte = False
-            aviso_obj.fecha_ultimo_corte_visto = fecha_corte
-
+        
+        batch.estado = 'SUCCESS'
+        batch.filas_procesadas = records_processed
         self.db.commit()
-        print(f"LOG: Ingesta finalizada. Nuevos: {count_new}, Actualizados: {count_updated}")
-        return batch_id
+        return {"batch_id": batch_id, "processed": records_processed}
+
+    def _upsert_aviso(self, data: dict):
+        existing = self.db.query(Aviso).filter(Aviso.aviso == data['aviso']).first()
+        if existing:
+            for key, value in data.items():
+                if hasattr(existing, key):
+                    setattr(existing, key, value)
+        else:
+            new_aviso = Aviso(**data)
+            self.db.add(new_aviso)

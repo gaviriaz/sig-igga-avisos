@@ -25,6 +25,9 @@ engine = create_engine(
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+# Security & RBAC
+from core.auth import AuthUser, get_current_user, RequireOficina
+
 from database.models import Base
 # Base.metadata.create_all(bind=engine) # Comentado para acelerar el inicio en Render (Free Tier)
 
@@ -211,6 +214,19 @@ def seed_database(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Error en seed: {str(e)}")
 
 
+@app.get("/admin/ingesta/discover")
+async def discover_latest_file(user: AuthUser = Depends(RequireOficina)):
+    """
+    Informa sobre la ruta y el archivo esperado en SharePoint según la fecha actual.
+    """
+    from services.discovery_service import DiscoveryService
+    info = DiscoveryService.get_target_path()
+    return {
+        "status": "ready",
+        "context": info,
+        "message": f"Buscando en carpeta {info['year']}/{info['month']}. El archivo debe seguir el patrón {info['expected_pattern']}"
+    }
+
 @app.post("/avisos/{aviso_id}/validate-insumos")
 async def validate_insumos(aviso_id: str, db: Session = Depends(get_db)):
     """
@@ -259,39 +275,76 @@ def get_aviso(aviso_id: str, db: Session = Depends(get_db)):
     return row_to_dict(aviso)
 
 @app.patch("/avisos/{aviso_id}")
-async def patch_aviso(aviso_id: str, request: Request, db: Session = Depends(get_db)):
+async def patch_aviso(
+    aviso_id: str, 
+    request: Request, 
+    db: Session = Depends(get_db),
+    user: AuthUser = Depends(get_current_user)
+):
     """
-    Endpoint genérico para actualizar campos de un aviso.
-    IMPLEMENTACIÓN SENIOR: Protegido por roles y auditoría automática vía Triggers.
+    Endpoint estratégico Senior Master: Protegido por RBAC y Regras de Negócio.
     """
     from database.models import Aviso
-    # from core.auth import RequireOficina # Descomentar cuando Auth esté activo en el Front
+    from services.domain_service import DomainService
+    
     try:
         payload = await request.json()
         aviso = db.query(Aviso).filter(Aviso.aviso == aviso_id).first()
         if not aviso:
             raise HTTPException(status_code=404, detail="Aviso no encontrado")
         
-        # Campos restringidos (Solo Oficina/Coordinador)
-        restricted_fields = ['prioridad_operativa', 'estado_workflow_interno', 'gestor_predial', 'analista_ambiental']
+        # 1. Definir Campos Restringidos (Solo Oficina/Senior)
+        restricted_fields = [
+            'prioridad_operativa', 'estado_workflow_interno', 
+            'gestor_predial', 'asistente_predial', 'analista_ambiental', 
+            'zona_ejecutora', 'tipo_status', 'reprogramacion', 'justificacion_repro'
+        ]
         
-        # Lógica de seguridad por campo (Field-level security)
-        # TODO: Validar rol del usuario desde el JWT
+        is_high_role = user.role in ['Oficina', 'Analista Ambiental', 'Coordinador Predial Senior']
         
-        allowed_fields = [c.name for c in aviso.__table__.columns]
+        # 2. Filtrado y Validación por Campo
+        dm_svc = DomainService(db)
+        allowed_columns = [c.name for c in aviso.__table__.columns]
+        
         for key, value in payload.items():
-            if key in allowed_fields:
-                # Validacin de dominios (Criterio 4.1 del prompt)
-                if key == 'tipo_status':
-                     from services.domain_service import DomainService
-                     if not DomainService(db).validate(key, value):
-                         raise HTTPException(status_code=400, detail=f"Valor '{value}' no es vldo para TIPO STATUS")
+            if key not in allowed_columns: continue
+            
+            # Bloqueo si no tiene rol para el campo restringido
+            if key in restricted_fields and not is_high_role:
+                raise HTTPException(
+                    status_code=403, 
+                    detail=f"Solo Oficina/Senior puede modificar el campo: {key}"
+                )
 
-                setattr(aviso, key, value)
+            # 3. Validación de Dominios (Catálogos)
+            domain_fields = [
+                'tipo_status', 'actividad_predial', 'gestor_predial', 
+                'asistente_predial', 'analista_ambiental', 'tipo_aviso', 
+                'municipio', 'departamento', 'zona_ejecutora', 'legalizacion', 'tipo_gestion'
+            ]
+            if key in domain_fields and value:
+                if not dm_svc.validate(key, value):
+                    raise HTTPException(
+                        status_code=400, 
+                        detail=f"Valor '{value}' no válido para el catálogo {key}"
+                    )
+            
+            # 4. Regla Condicional: Reprogramación
+            if key == 'reprogramacion' and value == 'Sí':
+                if not payload.get('justificacion_repro') and not aviso.justificacion_repro:
+                    raise HTTPException(
+                        status_code=400, 
+                        detail="Si reprograma, la justificación es obligatoria."
+                    )
+
+            setattr(aviso, key, value)
         
         db.commit()
         db.refresh(aviso)
         return row_to_dict(aviso)
+        
+    except HTTPException as he:
+        raise he
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))

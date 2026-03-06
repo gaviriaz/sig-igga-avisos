@@ -143,3 +143,21 @@ DROP TRIGGER IF EXISTS trg_aviso_audit ON aviso;
 CREATE TRIGGER trg_aviso_audit
 AFTER INSERT OR UPDATE ON aviso
 FOR EACH ROW EXECUTE FUNCTION trg_aviso_audit_func();
+
+-- 5. TABLA DE PERFILES (Para Supabase Auth Integration)
+CREATE TABLE IF NOT EXISTS public.profiles (
+    id UUID PRIMARY KEY,
+    full_name TEXT,
+    role TEXT DEFAULT 'Gestor de Campo',
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Triggers para autocompletar perfil desde auth.users (Supabase Magic)
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, full_name, role)
+  VALUES (new.id, new.raw_user_meta_data->>'full_name', 'Oficina');
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
