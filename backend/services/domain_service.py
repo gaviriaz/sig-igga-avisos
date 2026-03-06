@@ -25,6 +25,13 @@ class DomainService:
         result = self.db.execute(query).fetchall()
         return [row[0] for row in result]
 
+    def validate(self, domain_name: str, value: str) -> bool:
+        """Valida que un valor exista en el dominio."""
+        table_name = f"dom_{domain_name.lower().replace(' ', '_')}"
+        query = text(f"SELECT 1 FROM {table_name} WHERE valor = :val AND activo = TRUE LIMIT 1")
+        res = self.db.execute(query, {"val": value}).fetchone()
+        return res is not None
+
     def add_domain_value(self, domain_name: str, value: str):
         """Añade un nuevo valor al catálogo."""
         table_name = f"dom_{domain_name.lower()}"

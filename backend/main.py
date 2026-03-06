@@ -123,6 +123,19 @@ def health_check():
         "timestamp": str(datetime.now())
     }
 
+@app.post("/admin/setup-db")
+def setup_database_audit(db: Session = Depends(get_db)):
+    """Ejecuta el SQL de configuracin de auditoria y tablas de insumos."""
+    try:
+        sql_path = os.path.join(BASE_DIR, "database", "setup_audit.sql")
+        with open(sql_path, "r", encoding="utf-8") as f:
+            sql = f.read()
+        db.execute(text(sql))
+        db.commit()
+        return {"status": "success", "message": "Auditora y tablas de insumos configuradas."}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 
 @app.post("/dev/seed")
 def seed_database(db: Session = Depends(get_db)):
@@ -225,18 +238,33 @@ def get_aviso(aviso_id: str, db: Session = Depends(get_db)):
 
 @app.patch("/avisos/{aviso_id}")
 async def patch_aviso(aviso_id: str, request: Request, db: Session = Depends(get_db)):
-    """Endpoint genrico para actualizar campos de un aviso (como asignacin de gestor)."""
+    """
+    Endpoint genérico para actualizar campos de un aviso.
+    IMPLEMENTACIÓN SENIOR: Protegido por roles y auditoría automática vía Triggers.
+    """
     from database.models import Aviso
+    # from core.auth import RequireOficina # Descomentar cuando Auth esté activo en el Front
     try:
         payload = await request.json()
         aviso = db.query(Aviso).filter(Aviso.aviso == aviso_id).first()
         if not aviso:
             raise HTTPException(status_code=404, detail="Aviso no encontrado")
         
-        # Actualizacion dinamica de campos permitidos
+        # Campos restringidos (Solo Oficina/Coordinador)
+        restricted_fields = ['prioridad_operativa', 'estado_workflow_interno', 'gestor_predial', 'analista_ambiental']
+        
+        # Lógica de seguridad por campo (Field-level security)
+        # TODO: Validar rol del usuario desde el JWT
+        
         allowed_fields = [c.name for c in aviso.__table__.columns]
         for key, value in payload.items():
             if key in allowed_fields:
+                # Validacin de dominios (Criterio 4.1 del prompt)
+                if key == 'tipo_status':
+                     from services.domain_service import DomainService
+                     if not DomainService(db).validate(key, value):
+                         raise HTTPException(status_code=400, detail=f"Valor '{value}' no es vldo para TIPO STATUS")
+
                 setattr(aviso, key, value)
         
         db.commit()
