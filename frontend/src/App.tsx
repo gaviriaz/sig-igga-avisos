@@ -8,6 +8,7 @@ import Infraestructura from './pages/Infraestructura';
 import SistemasGIS from './pages/SistemasGIS';
 import Ciberseguridad from './pages/Ciberseguridad';
 import Protocolos from './pages/Protocolos';
+import NOCCommand from './pages/NOCCommand';
 import ProtectedRoute from './components/ProtectedRoute';
 
 const App: React.FC = () => {
@@ -27,6 +28,7 @@ const App: React.FC = () => {
                 <Route path="/sistemas-gis" element={<SistemasGIS />} />
                 <Route path="/ciberseguridad" element={<Ciberseguridad />} />
                 <Route path="/protocolos" element={<Protocolos />} />
+                <Route path="/noc-command" element={<NOCCommand />} />
 
                 {/* 🔐 Protected Routes */}
                 <Route

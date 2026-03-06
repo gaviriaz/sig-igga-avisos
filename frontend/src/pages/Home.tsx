@@ -109,7 +109,10 @@ const Home: React.FC = () => {
                             >
                                 INICIAR TERMINAL <ChevronRight className="ml-2 group-hover:translate-x-1 transition-transform" />
                             </button>
-                            <button className="btn-secondary h-20 px-10 text-lg font-black group border-dashed">
+                            <button
+                                onClick={() => navigate('/noc-command')}
+                                className="btn-secondary h-20 px-10 text-lg font-black group border-dashed"
+                            >
                                 DESPLEGAR DOCUMENTACIÓN
                                 <ChevronRight className="ml-2 opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                             </button>
