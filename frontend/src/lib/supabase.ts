@@ -4,8 +4,9 @@ import { createClient } from '@supabase/supabase-js';
 const FALLBACK_URL = 'https://vdzfamjklmwlptitxvvd.supabase.co';
 const FALLBACK_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkemZhbWprbG13bHB0aXR4dnZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0NjMwMDYsImV4cCI6MjA4ODAzOTAwNn0.vTgeIcQK8beqhV8gpGjDFXM2sHZEE0c90yYDptMAjVo';
 
-const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL || FALLBACK_URL;
-const supabaseAnonKey = import.meta.env?.VITE_SUPABASE_ANON_KEY || FALLBACK_KEY;
+const meta = (import.meta as any);
+const supabaseUrl = meta.env?.VITE_SUPABASE_URL || FALLBACK_URL;
+const supabaseAnonKey = meta.env?.VITE_SUPABASE_ANON_KEY || FALLBACK_KEY;
 
 if (!supabaseUrl || supabaseUrl === 'undefined') {
     console.error('CRITICAL: supabaseUrl is missing or invalid. Check your .env file.');
