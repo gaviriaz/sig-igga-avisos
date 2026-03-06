@@ -19,6 +19,22 @@ const Login: React.FC = () => {
         setError(null);
 
         try {
+            // 🛑 1. VALIDACIÓN PREVIA DE WHITE-LIST (Strict Security)
+            const { data: whitelisted, error: wlError } = await supabase
+                .from('app_system_user')
+                .select('*')
+                .eq('email', email.trim().toLowerCase())
+                .single();
+
+            if (wlError || !whitelisted) {
+                throw new Error('Lo sentimos, su correo no está en la base de datos de personal autorizado. Solicite acceso al Administrador.');
+            }
+
+            if (!whitelisted.activo) {
+                throw new Error('Su cuenta ha sido desactivada por administración.');
+            }
+
+            // 🚀 2. PROCEDER CON EL LOGIN NORMAL
             const { data, error } = await supabase.auth.signInWithPassword({
                 email,
                 password,

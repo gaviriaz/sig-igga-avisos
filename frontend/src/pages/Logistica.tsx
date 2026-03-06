@@ -13,6 +13,7 @@ import {
     ArrowRight
 } from 'lucide-react';
 import { getColombiaHolidays, getWeekNumber, Holiday } from '../utils/colombiaCalendar';
+import TacticalCalendar from '../components/TacticalCalendar';
 
 // Mock data para los avisos
 const MOCK_AVISOS = [
@@ -26,7 +27,6 @@ const MOCK_AVISOS = [
 const Logistica: React.FC = () => {
     const [selectedAvisos, setSelectedAvisos] = useState<string[]>([]);
     const [currentYear] = useState(new Date().getFullYear());
-    const [holidays] = useState<Holiday[]>(getColombiaHolidays(currentYear));
     const [gestorPos, setGestorPos] = useState('Bucaramanga - Oficinas Centrales');
     const [workCycle] = useState({ work: 22, rest: 7 });
     const [isOptimizing, setIsOptimizing] = useState(false);
@@ -38,7 +38,6 @@ const Logistica: React.FC = () => {
         );
     };
 
-    // Lógica de Optimización Táctica Real (OSRM API - Open Source)
     const [optimizedPath, setOptimizedPath] = useState<string[]>([]);
     const [routeInfo, setRouteInfo] = useState({ distance: 0, duration: 0 });
 
@@ -53,9 +52,6 @@ const Logistica: React.FC = () => {
                 .map(c => `${c[0]},${c[1]}`)
                 .join(';');
 
-            const response = await fetch(`https://router.project-osrm.org/dtm/driving/${coordsString}?overview=false`);
-            // Nota: Se usa dtm para obtener la matriz de duraciones si se quisiera TSP real
-            // Por ahora usamos route para obtener la trayectoria simple
             const routeResponse = await fetch(`https://router.project-osrm.org/route/v1/driving/${coordsString}?overview=false`);
             const data = await routeResponse.json();
 
@@ -118,7 +114,7 @@ const Logistica: React.FC = () => {
                                     <Filter className="w-4 h-4 text-primary" /> Inventario de Avisos
                                 </h3>
                                 <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-xs font-black">
-                                    {MOCK_AVISOS.length} DISNIBLES
+                                    {MOCK_AVISOS.length} DISPONIBLES
                                 </span>
                             </div>
 
@@ -152,7 +148,6 @@ const Logistica: React.FC = () => {
                             </div>
                         </section>
 
-                        {/* Configuración de Origen */}
                         <section className="glass rounded-[2rem] p-6 border-white/5">
                             <h3 className="text-sm font-black uppercase italic tracking-wider text-slate-400 mb-4 flex items-center gap-2">
                                 <User className="w-4 h-4" /> Configuración Despacho
@@ -182,11 +177,9 @@ const Logistica: React.FC = () => {
                         </section>
                     </aside>
 
-                    {/* Panel Central: Mapa y Planificación */}
                     <div className="lg:col-span-8 space-y-6">
-                        {/* Mapa Táctico Placeholder */}
                         <section className="glass rounded-[3rem] h-[500px] border-white/5 overflow-hidden relative group">
-                            <div className="absolute inset-0 bg-slate-900/50 flex flex-col items-center justify-center">
+                            <div className="absolute inset-0 bg-slate-900/50 flex flex-col items-center justify-center text-center p-6">
                                 <div className="p-8 rounded-full bg-primary/5 border border-primary/10 animate-pulse mb-4">
                                     <Navigation className="w-16 h-16 text-primary/30 rotate-45" />
                                 </div>
@@ -196,7 +189,7 @@ const Logistica: React.FC = () => {
                                     </p>
                                 ) : optimizedPath.length > 0 ? (
                                     <div className="flex flex-col items-center gap-4">
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex flex-wrap justify-center items-center gap-2">
                                             {optimizedPath.map((id, i) => (
                                                 <React.Fragment key={id}>
                                                     <div className="glass px-3 py-1 rounded-lg border-primary/30 text-primary font-black text-[10px]">{id}</div>
@@ -204,7 +197,7 @@ const Logistica: React.FC = () => {
                                                 </React.Fragment>
                                             ))}
                                         </div>
-                                        <p className="text-slate-500 font-mono text-[9px] tracking-widest uppercase italic">
+                                        <p className="text-slate-500 font-mono text-[9px] tracking-widest uppercase italic border-t border-white/5 pt-4">
                                             Route Optimized for {gestorPos}
                                         </p>
                                     </div>
@@ -215,14 +208,6 @@ const Logistica: React.FC = () => {
                                 )}
                             </div>
 
-                            {/* HUD Controles Mapa */}
-                            <div className="absolute top-6 right-6 space-y-2">
-                                <div className="glass p-2 rounded-xl border-white/10 hover:bg-white/10 transition-all cursor-pointer">
-                                    <Calendar className="w-5 h-5 text-slate-400" />
-                                </div>
-                            </div>
-
-                            {/* Info de Ruta */}
                             <div className="absolute bottom-6 left-6 right-6">
                                 <div className="glass p-6 rounded-[2rem] border-white/10 flex flex-wrap items-center justify-between gap-4">
                                     <div className="flex items-center gap-4">
@@ -248,38 +233,27 @@ const Logistica: React.FC = () => {
                             </div>
                         </section>
 
-                        {/* Calendario de Festivos y Ciclos Laborales */}
                         <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="glass rounded-[2rem] p-6 border-white/5">
-                                <h3 className="text-sm font-black uppercase italic tracking-wider text-slate-300 mb-6 flex items-center gap-2">
-                                    <Calendar className="w-4 h-4 text-primary" /> Festivos Colombia {currentYear}
-                                </h3>
-                                <div className="space-y-4 max-h-[150px] overflow-y-auto pr-2 custom-scrollbar">
-                                    {holidays.map((h, i) => (
-                                        <div key={i} className="flex items-center justify-between py-2 border-b border-white/5">
-                                            <span className="text-sm font-bold text-slate-400">{h.name}</span>
-                                            <span className="text-[10px] font-mono bg-slate-900 px-2 py-1 rounded text-primary">{h.date}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+                            <TacticalCalendar year={currentYear} />
 
-                            <div className="glass rounded-[2rem] p-6 border-white/5 bg-primary/5 relative overflow-hidden">
+                            <div className="glass rounded-[2rem] p-6 border-white/5 bg-primary/5 relative overflow-hidden flex flex-col justify-between">
                                 <div className="absolute -right-4 -top-4 opacity-5 rotate-12">
                                     <Clock className="w-24 h-24" />
                                 </div>
-                                <h3 className="text-sm font-black uppercase italic tracking-wider text-primary mb-4">Cronograma de Rendimiento</h3>
-                                <div className="flex items-end justify-between gap-2 h-16 mb-4">
-                                    {[65, 80, 45, 90, 70, 85, 95].map((val, i) => (
-                                        <div key={i} className="flex-1 bg-primary/20 rounded-t-lg relative group">
-                                            <div
-                                                className="absolute bottom-0 left-0 right-0 bg-primary rounded-t-lg transition-all duration-1000"
-                                                style={{ height: `${val}%` }}
-                                            ></div>
-                                        </div>
-                                    ))}
+                                <div>
+                                    <h3 className="text-sm font-black uppercase italic tracking-wider text-primary mb-4">Cronograma de Rendimiento</h3>
+                                    <div className="flex items-end justify-between gap-2 h-16 mb-4">
+                                        {[65, 80, 45, 90, 70, 85, 95].map((val, i) => (
+                                            <div key={i} className="flex-1 bg-primary/20 rounded-t-lg relative group">
+                                                <div
+                                                    className="absolute bottom-0 left-0 right-0 bg-primary rounded-t-lg transition-all duration-1000"
+                                                    style={{ height: `${val}%` }}
+                                                ></div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                                <p className="text-[10px] text-slate-400 font-mono leading-relaxed italic uppercase">
+                                <p className="text-[10px] text-slate-400 font-mono leading-relaxed italic uppercase mt-4">
                                     * Cálculo basado en ciclo 22/7. Próxima rotación de descanso estimada en 12 días calendarios.
                                 </p>
                             </div>

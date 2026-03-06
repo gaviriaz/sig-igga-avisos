@@ -21,8 +21,11 @@ import {
     Plus,
     Users,
     ChevronRight,
-    ChevronLeft
+    ChevronLeft,
+    Truck
 } from 'lucide-react';
+
+import Logistica from './Logistica';
 
 import Map from '../components/Map';
 import AvisoList from '../components/AvisoList';
@@ -37,7 +40,7 @@ import { useAvisoStore } from '../store/useAvisoStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { getApiUrl } from '../config/api';
 
-type DashboardTab = 'operations' | 'analytics' | 'settings' | 'users';
+type DashboardTab = 'operations' | 'analytics' | 'settings' | 'users' | 'logistics';
 
 const Dashboard: React.FC = () => {
     const { avisos, setAvisos, setLoading, filterAvisos } = useAvisoStore();
@@ -204,6 +207,7 @@ const Dashboard: React.FC = () => {
     // RBAC: Menú dinámico según el rol
     const menuItems = [
         { id: 'operations', icon: MapIcon, label: 'Operaciones', roles: ['Oficina', 'Analista Ambiental', 'Coordinador Predial Junior', 'Coordinador Predial Senior'] },
+        { id: 'logistics', icon: Truck, label: 'Logística', roles: ['Oficina', 'Coordinador Predial Senior', 'Analista Ambiental'] },
         { id: 'analytics', icon: BarChart3, label: 'Estadísticas', roles: ['Oficina', 'Coordinador Predial Senior'] },
         { id: 'users', icon: Users, label: 'Usuarios', roles: ['Oficina'] },
         { id: 'settings', icon: Settings, label: 'Catálogos', roles: ['Oficina', 'Coordinador Predial Senior'] },
@@ -428,18 +432,21 @@ const Dashboard: React.FC = () => {
                         {currentTab === 'settings' ? <DomainManager /> :
                             currentTab === 'users' ? <UserManagement /> :
                                 currentTab === 'analytics' ? <AnalyticsDashboard /> :
-                                    <div className="glass rounded-[3rem] border-white/5 p-12 flex flex-col items-center justify-center text-center gap-6 h-full">
-                                        <div className="w-24 h-24 bg-white/5 rounded-[2.5rem] flex items-center justify-center text-indigo-400 mb-4 border border-white/10">
-                                            <BarChart3 size={48} />
+                                    currentTab === 'logistics' ? (
+                                        <div className="h-full scale-95 origin-top"><Logistica /></div>
+                                    ) :
+                                        <div className="glass rounded-[3rem] border-white/5 p-12 flex flex-col items-center justify-center text-center gap-6 h-full">
+                                            <div className="w-24 h-24 bg-white/5 rounded-[2.5rem] flex items-center justify-center text-indigo-400 mb-4 border border-white/10">
+                                                <BarChart3 size={48} />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-3xl font-black text-white mb-2 uppercase tracking-tighter">Módulo en Desarrollo</h3>
+                                                <p className="text-slate-500 max-w-sm mx-auto font-medium">Estamos configurando los servicios avanzados de análisis de hotspots.</p>
+                                            </div>
+                                            <button onClick={() => setCurrentTab('operations')} className="h-12 px-8 bg-indigo-600 hover:bg-indigo-500 rounded-2xl text-xs font-black uppercase tracking-widest text-white transition-all shadow-xl shadow-indigo-600/20">
+                                                Volver a Operaciones
+                                            </button>
                                         </div>
-                                        <div>
-                                            <h3 className="text-3xl font-black text-white mb-2 uppercase tracking-tighter">Módulo en Desarrollo</h3>
-                                            <p className="text-slate-500 max-w-sm mx-auto font-medium">Estamos configurando los servicios avanzados de análisis de hotspots.</p>
-                                        </div>
-                                        <button onClick={() => setCurrentTab('operations')} className="h-12 px-8 bg-indigo-600 hover:bg-indigo-500 rounded-2xl text-xs font-black uppercase tracking-widest text-white transition-all shadow-xl shadow-indigo-600/20">
-                                            Volver a Operaciones
-                                        </button>
-                                    </div>
                         }
                     </div>
                 )}

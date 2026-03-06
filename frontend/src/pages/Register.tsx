@@ -20,13 +20,29 @@ const Register: React.FC = () => {
         setError(null);
 
         try {
+            // 🛑 1. VALIDACIÓN DE WHITE-LIST STRICT (Zero Cost Rule)
+            const { data: whitelisted, error: wlError } = await supabase
+                .from('app_system_user')
+                .select('*')
+                .eq('email', email.trim().toLowerCase())
+                .single();
+
+            if (wlError || !whitelisted) {
+                throw new Error('Su correo no está en la Lista Blanca autorizada. Por favor, solicite acceso al Coordinador Senior.');
+            }
+
+            if (!whitelisted.activo) {
+                throw new Error('Su perfil técnico se encuentra INACTIVO. Contacte a Soporte.');
+            }
+
+            // 🚀 2. PROCEDER CON EL REGISTRO SI ESTÁ AUTORIZADO
             const { error: signUpError } = await supabase.auth.signUp({
                 email,
                 password,
                 options: {
                     data: {
-                        full_name: name,
-                        role: role
+                        full_name: whitelisted.full_name || name,
+                        role: whitelisted.role || role
                     }
                 }
             });

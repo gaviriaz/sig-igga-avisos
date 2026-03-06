@@ -2,7 +2,8 @@ import { supabase } from '../lib/supabase';
 
 // URL Base persistente (Fallbacks)
 const meta = (import.meta as any);
-let currentApiUrl = meta.env?.VITE_API_URL || 'http://localhost:8000';
+// FORZAMOS localhost como base para evitar que variables viejas de Cloudflare Build nos rompan el sistema
+let currentApiUrl = 'http://localhost:8000';
 
 export const getApiUrl = async () => {
     // Si ya estamos en localhost, no buscamos en la nube
