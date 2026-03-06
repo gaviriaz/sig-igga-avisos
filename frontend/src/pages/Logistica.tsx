@@ -102,7 +102,12 @@ const Logistica: React.FC = () => {
             );
 
             if (selectedData.length === 0) {
-                alert('⚠️ Los avisos seleccionados no tienen coordenadas WGS84 válidas aún. Ejecuta el script de geolocalización primero.');
+                // Debug: mostrar coordenadas de los avisos seleccionados
+                const debugInfo = avisos
+                    .filter(a => selectedAvisoIds.includes(a.aviso))
+                    .map(a => `${a.aviso}: lat=${a.latitud_decimal}, lon=${a.longitud_decimal}`);
+                console.warn('DEBUG coords de avisos seleccionados:', debugInfo);
+                alert('⚠️ Los avisos seleccionados no tienen coordenadas WGS84 válidas aún.\n\nHaz Ctrl+Shift+R (hard refresh) para recargar los datos actualizados desde el servidor.');
                 setIsOptimizing(false);
                 return;
             }
