@@ -917,5 +917,63 @@ async def upload_geam_manual(
             os.remove(temp_path)
 
 
+# ============================================================
+# MÓDULO INSUMOS DE CAMPO (KML + OneDrive Gate)
+# ============================================================
+
+@app.get("/avisos/{aviso_id}/insumos")
+def get_insumos_status(aviso_id: str, db: Session = Depends(get_db)):
+    """Consulta el estado de los insumos y validación KML de un aviso."""
+    from services.insumos_service import InsumosService
+    return InsumosService(db).validate_from_url(aviso_id)
+
+@app.get("/avisos/{aviso_id}/gate-campo")
+def check_gate_campo(aviso_id: str, db: Session = Depends(get_db)):
+    """Verifica si el aviso puede ir a campo (Gate de Insumos)."""
+    from services.insumos_service import InsumosService
+    return InsumosService(db).can_go_to_field(aviso_id)
+
+@app.patch("/avisos/{aviso_id}/insumos/ruta")
+async def set_ruta_insumos(aviso_id: str, request: Request, db: Session = Depends(get_db)):
+    """Registra la URL de carpeta OneDrive para los insumos del aviso (Modo A)."""
+    from database.models import Aviso
+    payload = await request.json()
+    aviso = db.query(Aviso).filter(Aviso.aviso == aviso_id).first()
+    if not aviso:
+        raise HTTPException(status_code=404, detail="Aviso no encontrado")
+    aviso.ruta_insumos_onedrive = payload.get("ruta_insumos_onedrive", "")
+    aviso.estado_insumos = "CREADO"
+    aviso.fecha_creacion_carpeta = datetime.now()
+    aviso.usuario_creacion_carpeta = payload.get("usuario", "Oficina")
+    db.commit()
+    return {"ok": True, "aviso": aviso_id, "ruta": aviso.ruta_insumos_onedrive, "estado_insumos": "CREADO"}
+
+@app.post("/avisos/{aviso_id}/insumos/validate-kml")
+async def validate_kml_endpoint(aviso_id: str, request: Request, db: Session = Depends(get_db)):
+    """
+    Valida un archivo KML subido directamente por el usuario.
+    Body: multipart/form-data con campo 'kml_file' (texto KML)
+    y 'subfolder_counts' (JSON con conteos de subcarpetas).
+    """
+    from services.insumos_service import InsumosService
+    try:
+        payload = await request.json()
+        kml_content = payload.get("kml_content", "")
+        subfolder_counts = payload.get("subfolder_counts", {"predial": 0, "inventario": 0, "shp": 0, "reporte": 0})
+        operator = payload.get("usuario", "Oficina")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Body debe ser JSON con 'kml_content' y 'subfolder_counts'")
+
+    if not kml_content:
+        raise HTTPException(status_code=400, detail="'kml_content' es requerido")
+
+    svc = InsumosService(db)
+    result = svc.validate_kml_and_save(aviso_id, kml_content, subfolder_counts, operator)
+    
+    # Invalida el caché para reflejar cambio del estado de insumos
+    cache_avisos.clear()
+    return result
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=False)

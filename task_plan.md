@@ -6,13 +6,13 @@ Construir el sistema integral de gestión de avisos (Zero Cost) según los reque
 ## Fases del Proyecto
 
 ### Fase 1: Refinamiento de Base de Datos y Modelos
-- [ ] Actualizar `models.py` con TODOS los campos del contrato de datos (50+ columnas).
-- [ ] Incorporar campos de "Insumos" (OneDrive/KML) en el modelo.
-- [ ] Actualizar `setup_audit.sql` para asegurar que todas las tablas de dominios tengan las columnas correctas (`valor`, `activo`).
+- [x] Actualizar `models.py` con TODOS los campos del contrato de datos (50+ columnas).
+- [x] Incorporar campos de "Insumos" (OneDrive/KML) en el modelo.
+- [x] Actualizar `setup_audit.sql` para asegurar que todas las tablas de dominios tengan las columnas correctas (`valor`, `activo`).
 - [ ] Aplicar migraciones a Supabase mediante el endpoint `/admin/setup-db`.
 
 ### Fase 2: Usuarios y RBAC (Control de Acceso)
-- [ ] Poblar la tabla `app_system_user` con el personal de IGGA proporcionado.
+- [x] Poblar la tabla `app_system_user` con el personal de IGGA proporcionado.
 - [ ] Implementar decoradores de seguridad a nivel de campo (Field-level security) en el backend.
 - [ ] Asegurar que solo roles autorizados puedan cambiar estados Críticos (`TIPO STATUS`, `reprogramacion`, etc.).
 
