@@ -213,27 +213,17 @@ def list_domain_values(domain_key: str, db: Session = Depends(get_db)):
 @app.get("/avisos")
 def list_avisos(db: Session = Depends(get_db)):
     from database.models import Aviso
-    try:
-        rows = db.query(Aviso).all()
-        return [row_to_dict(r) for r in rows]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    rows = db.query(Aviso).all()
+    return [row_to_dict(r) for r in rows]
 
-
-@app.get("/avisos")
 
 @app.get("/avisos/{aviso_id}")
 def get_aviso(aviso_id: str, db: Session = Depends(get_db)):
     from database.models import Aviso
-    try:
-        aviso = db.query(Aviso).filter(Aviso.aviso == aviso_id).first()
-        if not aviso:
-            raise HTTPException(status_code=404, detail="Aviso no encontrado")
-        return row_to_dict(aviso)
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    aviso = db.query(Aviso).filter(Aviso.aviso == aviso_id).first()
+    if not aviso:
+        raise HTTPException(status_code=404, detail="Aviso no encontrado")
+    return row_to_dict(aviso)
 
 @app.patch("/avisos/{aviso_id}")
 async def patch_aviso(aviso_id: str, request: Request, db: Session = Depends(get_db)):
@@ -367,23 +357,20 @@ ALL_ROLES = sorted(WORKFLOW_ROLES | FIELD_ROLES | {"Administrador"})
 def list_users(db: Session = Depends(get_db)):
     """Retorna todos los usuarios del sistema con roles IGGA reales."""
     from database.models import SystemUser
-    try:
-        users = db.query(SystemUser).filter(SystemUser.activo == True).order_by(SystemUser.full_name).all()
-        return [
-            {
-                "id": u.id,
-                "username": u.username,
-                "full_name": u.full_name,
-                "email": u.email,
-                "role": u.role,
-                "zona_ejecutora": u.zona_ejecutora,
-                "active": u.activo,
-                "can_edit_workflow": u.role in WORKFLOW_ROLES,
-            }
-            for u in users
-        ]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    users = db.query(SystemUser).filter(SystemUser.activo == True).order_by(SystemUser.full_name).all()
+    return [
+        {
+            "id": u.id,
+            "username": u.username,
+            "full_name": u.full_name,
+            "email": u.email,
+            "role": u.role,
+            "zona_ejecutora": u.zona_ejecutora,
+            "active": u.activo,
+            "can_edit_workflow": u.role in WORKFLOW_ROLES,
+        }
+        for u in users
+    ]
 
 
 @app.get("/users")
@@ -528,7 +515,7 @@ def update_aviso_state(aviso_id: str, new_state: str, db: Session = Depends(get_
 
     aviso.estado_workflow_interno = new_state
     db.add(AvisoHistorial(
-        aviso_id=aviso_id,
+        aviso=aviso_id,
         campo="estado_workflow_interno",
         valor_anterior=old_state,
         valor_nuevo=new_state,

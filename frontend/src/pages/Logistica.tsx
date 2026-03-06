@@ -59,7 +59,7 @@ const Logistica: React.FC = () => {
 
     // Avisos filtrados según rol
     const displayAvisos = useMemo(() => {
-        let filtered = avisos.filter(a => a.latitud_decimal && a.longitud_decimal);
+        let filtered = [...avisos];
 
         // Si es Gestor, solo ve lo asignado a él
         if (profile?.role === 'Gestor de Campo') {
@@ -85,28 +85,58 @@ const Logistica: React.FC = () => {
         );
     };
 
+    // Valida que las coordenadas sean WGS84 reales (Colombia: lat ~-5 a 15, lon ~-82 a -66)
+    const isValidCoord = (lat: number | null | undefined, lon: number | null | undefined): boolean => {
+        if (lat == null || lon == null) return false;
+        return lat >= -5 && lat <= 15 && lon >= -82 && lon <= -60;
+    };
+
     const optimizeRoute = async () => {
         if (selectedAvisoIds.length === 0) return;
         setIsOptimizing(true);
 
         try {
-            const selectedData = avisos.filter(a => selectedAvisoIds.includes(a.aviso));
-            // Punto de inicio (simulado o geolocalizado)
-            const originCoords = [-73.1198, 7.1193];
-            const coordsString = [originCoords, ...selectedData.map(a => [a.longitud_decimal, a.latitud_decimal])]
+            const selectedData = avisos.filter(a =>
+                selectedAvisoIds.includes(a.aviso) &&
+                isValidCoord(a.latitud_decimal, a.longitud_decimal)
+            );
+
+            if (selectedData.length === 0) {
+                alert('⚠️ Los avisos seleccionados no tienen coordenadas WGS84 válidas aún. Ejecuta el script de geolocalización primero.');
+                setIsOptimizing(false);
+                return;
+            }
+
+            if (selectedData.length < selectedAvisoIds.length) {
+                const diff = selectedAvisoIds.length - selectedData.length;
+                console.warn(`⚠️ ${diff} avisos excluidos por no tener coordenadas válidas.`);
+            }
+
+            // Punto de inicio (Medellín - ajusta según tus necesidades)
+            const originCoords = [-75.5636, 6.2442];
+            const coordsString = [originCoords, ...selectedData.map(a => [a.longitud_decimal!, a.latitud_decimal!])]
                 .map(c => `${c[0]},${c[1]}`)
                 .join(';');
 
-            // Cambiamos a 'foot' para optimización de recorrido a pie
-            const routeResponse = await fetch(`https://router.project-osrm.org/route/v1/foot/${coordsString}?overview=false`);
+            // OSRM - perfil foot para recorridos a pie
+            const routeResponse = await fetch(
+                `https://router.project-osrm.org/route/v1/foot/${coordsString}?overview=false&steps=false`
+            );
+
+            if (!routeResponse.ok) {
+                throw new Error(`OSRM respondió con ${routeResponse.status}`);
+            }
+
             const data = await routeResponse.json();
 
             if (data.code === 'Ok') {
-                setOptimizedPath(selectedAvisoIds);
+                setOptimizedPath(selectedData.map(a => a.aviso));
                 setRouteInfo({
                     distance: parseFloat((data.routes[0].distance / 1000).toFixed(1)),
                     duration: parseFloat((data.routes[0].duration / 3600).toFixed(1))
                 });
+            } else {
+                alert(`⚠️ OSRM Error: ${data.message || data.code}`);
             }
         } catch (error) {
             console.error("OSRM Error:", error);
