@@ -63,11 +63,9 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 #  DIRECTORIO BASE PARA RUTAS RELATIVAS 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# Si estamos en /backend, subir un nivel para llegar a /capas
-ROOT_DIR = os.path.dirname(BASE_DIR)
 
-# Servir capas GeoJSON estticas (Ruta relativa)
-CAPAS_DIR = os.path.join(ROOT_DIR, "capas")
+# Servir capas GeoJSON estáticas (Ahora dentro de /backend para Render)
+CAPAS_DIR = os.path.join(BASE_DIR, "capas")
 try:
     if os.path.exists(CAPAS_DIR):
         app.mount("/capas", StaticFiles(directory=CAPAS_DIR), name="capas")

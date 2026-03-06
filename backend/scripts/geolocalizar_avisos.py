@@ -29,7 +29,7 @@ def run_geolocalization():
         """)
 
         # 2. Leer GeoJSON y cargar en batches
-        geojson_path = r"C:\Users\AlbertG\IGGA.SAS\PERSONAL\DEV\SIG-IGGA-AVISOS\capas\Torres.geojson"
+        geojson_path = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'capas', 'Torres.geojson'))
         print(f"INFO: Loading data from {geojson_path}...")
         with open(geojson_path, 'r', encoding='utf-8') as f:
             data = json.load(f)

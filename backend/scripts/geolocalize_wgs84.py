@@ -15,7 +15,7 @@ DATABASE_URL = os.environ.get(
     "postgresql://postgres:lP5LvF5dkFzIjvEU@db.vdzfamjklmwlptitxvvd.supabase.co:5432/postgres"
 )
 TORRES_GEOJSON = os.path.normpath(
-    os.path.join(os.path.dirname(__file__), '..', '..', 'capas', 'Torres.geojson')
+    os.path.join(os.path.dirname(__file__), '..', 'capas', 'Torres.geojson')
 )
 
 def main():
