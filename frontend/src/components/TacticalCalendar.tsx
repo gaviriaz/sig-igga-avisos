@@ -53,8 +53,8 @@ const TacticalCalendar: React.FC<TacticalCalendarProps> = ({ year }) => {
             </div>
 
             <div className="grid grid-cols-7 gap-2 mb-4">
-                {["L", "M", "M", "J", "V", "S", "D"].map(d => (
-                    <div key={d} className="text-center text-[10px] font-black text-slate-600 uppercase py-2">{d}</div>
+                {["L", "M", "M", "J", "V", "S", "D"].map((d, idx) => (
+                    <div key={`${d}-${idx}`} className="text-center text-[10px] font-black text-slate-600 uppercase py-2">{d}</div>
                 ))}
 
                 {days.map((day, i) => {
@@ -67,10 +67,10 @@ const TacticalCalendar: React.FC<TacticalCalendarProps> = ({ year }) => {
                         <div
                             key={day}
                             className={`h-12 rounded-xl flex flex-col items-center justify-center relative transition-all group cursor-help ${holiday
-                                    ? 'bg-primary/20 border border-primary/30 text-primary'
-                                    : isToday
-                                        ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/20'
-                                        : 'bg-white/5 border border-white/5 text-slate-400 hover:bg-white/10'
+                                ? 'bg-primary/20 border border-primary/30 text-primary'
+                                : isToday
+                                    ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/20'
+                                    : 'bg-white/5 border border-white/5 text-slate-400 hover:bg-white/10'
                                 }`}
                         >
                             <span className="text-xs font-black">{day}</span>
