@@ -29,6 +29,17 @@ ALTER TABLE aviso ADD COLUMN IF NOT EXISTS assigned_to_name TEXT;
 ALTER TABLE aviso
 ADD COLUMN IF NOT EXISTS not_presente_en_corte BOOLEAN DEFAULT FALSE;
 
+-- 0.1 CORREGIR TIPOS DE DATOS EN HISTORIAL
+DO $$ 
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'aviso_historial' AND column_name = 'usuario_id' AND data_type = 'uuid'
+    ) THEN
+        ALTER TABLE aviso_historial ALTER COLUMN usuario_id TYPE TEXT;
+    END IF;
+END $$;
+
 -- 1. CONFIGURACIÓN DE BUFFERS POR TIPO DE GESTIÓN
 CREATE TABLE IF NOT EXISTS cfg_kml_buffer_por_tipo_gestion (
     tipo_gestion TEXT PRIMARY KEY,
