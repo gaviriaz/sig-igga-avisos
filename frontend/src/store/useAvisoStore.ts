@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { supabase } from '../lib/supabase';
 
 export interface Aviso {
@@ -88,70 +89,78 @@ interface AvisoState {
     subscribeRealtime: () => () => void;
 }
 
-export const useAvisoStore = create<AvisoState>((set, get) => ({
-    avisos: [],
-    selectedAviso: null,
-    filteredAvisos: [],
-    isLoading: false,
+export const useAvisoStore = create<AvisoState>()(
+    persist(
+        (set, get) => ({
+            avisos: [],
+            selectedAviso: null,
+            filteredAvisos: [],
+            isLoading: false,
 
-    setAvisos: (avisos) => set({ avisos, filteredAvisos: avisos }),
-    selectAviso: (aviso) => set({ selectedAviso: aviso }),
-    setLoading: (loading) => set({ isLoading: loading }),
+            setAvisos: (avisos) => set({ avisos, filteredAvisos: avisos }),
+            selectAviso: (aviso) => set({ selectedAviso: aviso }),
+            setLoading: (loading) => set({ isLoading: loading }),
 
-    subscribeRealtime: () => {
-        const channel = supabase
-            .channel('db-aviso-changes')
-            .on('postgres_changes',
-                { event: '*', schema: 'public', table: 'aviso' },
-                (payload) => {
-                    console.log('📡 Realtime Change:', payload);
-                    const { eventType, new: newRecord, old: oldRecord } = payload;
+            subscribeRealtime: () => {
+                const channel = supabase
+                    .channel('db-aviso-changes')
+                    .on('postgres_changes',
+                        { event: '*', schema: 'public', table: 'aviso' },
+                        (payload) => {
+                            console.log('📡 Realtime Change:', payload);
+                            const { eventType, new: newRecord, old: oldRecord } = payload;
 
-                    const currentAvisos = get().avisos;
+                            const currentAvisos = get().avisos;
 
-                    if (eventType === 'INSERT') {
-                        const updated = [newRecord as Aviso, ...currentAvisos];
-                        set({ avisos: updated, filteredAvisos: updated });
-                    } else if (eventType === 'UPDATE') {
-                        const updated = currentAvisos.map(a =>
-                            a.aviso === newRecord.aviso ? { ...a, ...newRecord } : a
-                        );
-                        const newSelected = get().selectedAviso?.aviso === newRecord.aviso
-                            ? { ...get().selectedAviso, ...newRecord } as Aviso
-                            : get().selectedAviso;
+                            if (eventType === 'INSERT') {
+                                const updated = [newRecord as Aviso, ...currentAvisos];
+                                set({ avisos: updated, filteredAvisos: updated });
+                            } else if (eventType === 'UPDATE') {
+                                const updated = currentAvisos.map(a =>
+                                    a.aviso === newRecord.aviso ? { ...a, ...newRecord } : a
+                                );
+                                const newSelected = get().selectedAviso?.aviso === newRecord.aviso
+                                    ? { ...get().selectedAviso, ...newRecord } as Aviso
+                                    : get().selectedAviso;
 
-                        set({
-                            avisos: updated,
-                            filteredAvisos: updated,
-                            selectedAviso: newSelected
-                        });
-                    } else if (eventType === 'DELETE') {
-                        const updated = currentAvisos.filter(a => a.aviso !== oldRecord.aviso);
-                        set({ avisos: updated, filteredAvisos: updated });
-                    }
-                }
-            )
-            .subscribe();
+                                set({
+                                    avisos: updated,
+                                    filteredAvisos: updated,
+                                    selectedAviso: newSelected
+                                });
+                            } else if (eventType === 'DELETE') {
+                                const updated = currentAvisos.filter(a => a.aviso !== oldRecord.aviso);
+                                set({ avisos: updated, filteredAvisos: updated });
+                            }
+                        }
+                    )
+                    .subscribe();
 
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    },
+                return () => {
+                    supabase.removeChannel(channel);
+                };
+            },
 
-    filterAvisos: (term) => set((state) => ({
-        filteredAvisos: state.avisos.filter(a =>
-            a.aviso.includes(term) ||
-            a.denominacion?.toLowerCase().includes(term.toLowerCase()) ||
-            a.tipo_de_gestion?.toLowerCase().includes(term.toLowerCase()) ||
-            a.municipio?.toLowerCase().includes(term.toLowerCase()) ||
-            a.gestor_predial?.toLowerCase().includes(term.toLowerCase())
-        )
-    })),
+            filterAvisos: (term) => set((state) => ({
+                filteredAvisos: state.avisos.filter(a =>
+                    a.aviso.includes(term) ||
+                    a.denominacion?.toLowerCase().includes(term.toLowerCase()) ||
+                    a.tipo_de_gestion?.toLowerCase().includes(term.toLowerCase()) ||
+                    a.municipio?.toLowerCase().includes(term.toLowerCase()) ||
+                    a.gestor_predial?.toLowerCase().includes(term.toLowerCase())
+                )
+            })),
 
-    updateAviso: (avisoId, updates) => set((state) => {
-        const newAvisos = state.avisos.map(a => a.aviso === avisoId ? { ...a, ...updates } : a);
-        const newFiltered = state.filteredAvisos.map(a => a.aviso === avisoId ? { ...a, ...updates } : a);
-        const newSelected = state.selectedAviso?.aviso === avisoId ? { ...state.selectedAviso, ...updates } : state.selectedAviso;
-        return { avisos: newAvisos, filteredAvisos: newFiltered, selectedAviso: newSelected };
-    }),
-}));
+            updateAviso: (avisoId, updates) => set((state) => {
+                const newAvisos = state.avisos.map(a => a.aviso === avisoId ? { ...a, ...updates } : a);
+                const newFiltered = state.filteredAvisos.map(a => a.aviso === avisoId ? { ...a, ...updates } : a);
+                const newSelected = state.selectedAviso?.aviso === avisoId ? { ...state.selectedAviso, ...updates } : state.selectedAviso;
+                return { avisos: newAvisos, filteredAvisos: newFiltered, selectedAviso: newSelected };
+            }),
+        }),
+        {
+            name: 'aviso-storage',
+            partialize: (state) => ({ avisos: state.avisos, filteredAvisos: state.filteredAvisos }),
+        }
+    )
+);

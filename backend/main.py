@@ -1,12 +1,15 @@
 import os
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from datetime import datetime
 import uvicorn
 from dotenv import load_dotenv
+from cachetools import TTLCache
+import time
 
 load_dotenv()
 
@@ -34,6 +37,14 @@ from database.models import Base
 #  FASTAPI APP 
 app = FastAPI(title="SIG IGGA/ISA - Gestion Integral de Avisos v7.5")
 
+# --- CAPA DE CACHÉ ESTRATÉGICA (Para soportar 30+ usuarios en Render Free) ---
+# maxsize=1 porque guardamos un solo objeto (la lista/dict completo)
+cache_avisos = TTLCache(maxsize=1, ttl=30)       # Lista de avisos (30 seg)
+cache_stats = TTLCache(maxsize=1, ttl=60)        # Dashboard (60 seg)
+cache_users = TTLCache(maxsize=1, ttl=300)       # Usuarios (5 min)
+cache_domains = TTLCache(maxsize=200, ttl=3600)  # Dominios individuales (1 hora)
+# ----------------------------------------------------------------------------
+
 ALLOWED = os.environ.get("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,https://sig-igga.pages.dev").split(",")
 
 app.add_middleware(
@@ -43,6 +54,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Compresión Gzip: Reduce el tamaño de los JSON masivos (Crucial para plan Render Free)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Handler global: garantiza CORS headers incluso en errores 500
 from fastapi.responses import JSONResponse
@@ -123,8 +137,14 @@ def health_check():
         "status": "online", 
         "engine": "FastAPI v7.5", 
         "db": "Supabase Ready", 
-        "timestamp": str(datetime.now())
+        "timestamp": str(datetime.now()),
+        "uptime": "active"
     }
+
+@app.get("/heartbeat")
+def heartbeat():
+    """Endpoint para mantener activa la instancia de Render (Ping externo)."""
+    return {"status": "beating", "time": time.time()}
 
 @app.post("/admin/setup-db")
 def setup_database_audit(db: Session = Depends(get_db)):
@@ -255,15 +275,25 @@ async def validate_insumos(aviso_id: str, db: Session = Depends(get_db)):
 @app.get("/domains/{domain_key}")
 def list_domain_values(domain_key: str, db: Session = Depends(get_db)):
     """Obtiene los valores de un dominio catastrado (dom_*)."""
+    if domain_key in cache_domains:
+        return cache_domains[domain_key]
+        
     from services.domain_service import DomainService
-    return DomainService(db).get_domain_values(domain_key)
+    result = DomainService(db).get_domain_values(domain_key)
+    cache_domains[domain_key] = result
+    return result
 
 
 @app.get("/avisos")
 def list_avisos(db: Session = Depends(get_db)):
+    if "list" in cache_avisos:
+        return cache_avisos["list"]
+    
     from database.models import Aviso
     rows = db.query(Aviso).all()
-    return [row_to_dict(r) for r in rows]
+    result = [row_to_dict(r) for r in rows]
+    cache_avisos["list"] = result
+    return result
 
 
 @app.get("/avisos/{aviso_id}")
@@ -341,6 +371,11 @@ async def patch_aviso(
         
         db.commit()
         db.refresh(aviso)
+        
+        # Invalida cache de lista para que refleje el cambio
+        cache_avisos.clear() 
+        cache_stats.clear()
+        
         return row_to_dict(aviso)
         
     except HTTPException as he:
@@ -457,9 +492,12 @@ ALL_ROLES = sorted(WORKFLOW_ROLES | FIELD_ROLES | {"Administrador"})
 @app.get("/users/all")
 def list_users(db: Session = Depends(get_db)):
     """Retorna todos los usuarios del sistema con roles IGGA reales."""
+    if "all" in cache_users:
+        return cache_users["all"]
+        
     from database.models import SystemUser
     users = db.query(SystemUser).filter(SystemUser.activo == True).order_by(SystemUser.full_name).all()
-    return [
+    result = [
         {
             "id": u.id,
             "username": u.username,
@@ -472,6 +510,8 @@ def list_users(db: Session = Depends(get_db)):
         }
         for u in users
     ]
+    cache_users["all"] = result
+    return result
 
 
 @app.get("/users")
@@ -485,8 +525,13 @@ def get_strategic_dashboard(db: Session = Depends(get_db)):
     Endpoint para el Módulo de Dashboard Estratégico.
     Retorna métricas de alto nivel para gestión de oficina (Senior Master).
     """
+    if "dashboard" in cache_stats:
+        return cache_stats["dashboard"]
+        
     from services.analytics_service import AnalyticsService
-    return AnalyticsService(db).get_strategic_stats()
+    result = AnalyticsService(db).get_strategic_stats()
+    cache_stats["dashboard"] = result
+    return result
 
 @app.get("/users/roles")
 def list_roles():
@@ -519,6 +564,10 @@ async def create_user(request: Request, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     db.refresh(user)
+    
+    # Invalida cache de usuarios
+    cache_users.clear()
+    
     return {"ok": True, "id": user.id, "username": user.username, "role": user.role}
 
 

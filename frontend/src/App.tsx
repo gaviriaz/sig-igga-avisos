@@ -13,6 +13,22 @@ import Logistica from './pages/Logistica';
 import ProtectedRoute from './components/ProtectedRoute';
 
 const App: React.FC = () => {
+    // Keep Render instance awake (Senior Master Strategy)
+    React.useEffect(() => {
+        const apiUrl = import.meta.env.VITE_API_URL || 'https://sig-igga-avisos.onrender.com';
+        const keepAlive = () => {
+            fetch(`${apiUrl}/heartbeat`)
+                .then(() => console.log('💓 Heartbeat sent to Render'))
+                .catch(() => { });
+        };
+
+        // Ping every 10 minutes to prevent sleep
+        const heartbeatInterval = setInterval(keepAlive, 10 * 60 * 1000);
+        keepAlive();
+
+        return () => clearInterval(heartbeatInterval);
+    }, []);
+
     return (
         <HashRouter
             future={{
