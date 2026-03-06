@@ -6,7 +6,7 @@ import {
     Zap, MapPin, Loader2, AlertTriangle, CheckCircle2, Clock,
     FolderKanban, Sparkles, History, Info, MessageSquare, Send,
     ChevronRight, TreeDeciduous, Home, HardHat, ChevronDown,
-    FileText, User, Tag
+    FileText, User, Tag, ShieldAlert
 } from 'lucide-react';
 
 type DetailTab = 'resumen' | 'tecnico' | 'comunicacion' | 'archivos' | 'auditoria';
@@ -160,6 +160,7 @@ const AvisoDetail: React.FC = () => {
     }
 
     const isReadOnly = !['Oficina', 'Analista Ambiental', 'Coordinador Predial Senior'].includes(profile?.role || '');
+    const canValidate = ['Oficina', 'Analista Ambiental', 'Coordinador Predial Senior', 'Gestor de Campo'].includes(profile?.role || '');
 
     // Helpers
     const isCritico = selectedAviso.risk_score > 75;
@@ -175,16 +176,21 @@ const AvisoDetail: React.FC = () => {
                             #{selectedAviso.aviso}
                         </span>
                         {isCritico ? (
-                            <span className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 text-rose-400 rounded-full text-xs font-bold border border-rose-500/20">
-                                <AlertTriangle size={14} /> Riesgo Crítico
+                            <span className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 text-rose-400 rounded-full text-xs font-bold border border-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.2)]">
+                                <AlertTriangle size={14} className="animate-pulse" /> Riesgo {selectedAviso.risk_score}%
                             </span>
                         ) : isMedio ? (
                             <span className="px-3 py-1.5 bg-amber-500/10 text-amber-400 rounded-full text-xs font-bold border border-amber-500/20">
-                                Riesgo Medio
+                                Riesgo {selectedAviso.risk_score}%
                             </span>
                         ) : (
                             <span className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 rounded-full text-xs font-bold border border-emerald-500/20">
-                                Riesgo Bajo
+                                Riesgo {selectedAviso.risk_score}%
+                            </span>
+                        )}
+                        {selectedAviso.estado_sla === 'VENCIDO' && (
+                            <span className="px-3 py-1.5 bg-rose-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest animate-bounce">
+                                SLA VENCIDO
                             </span>
                         )}
                     </div>
@@ -429,29 +435,46 @@ const AvisoDetail: React.FC = () => {
                                         <p className="text-sm text-slate-400">Archivos y evidencias en nube</p>
                                     </div>
                                 </div>
-                                {!isReadOnly && (
+                                {canValidate && (
                                     <button
                                         onClick={handleValidateInsumos}
                                         disabled={validating}
-                                        className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition-colors"
+                                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-indigo-600/20"
                                     >
-                                        {validating ? <Loader2 size={16} className="animate-spin inline" /> : 'Auditar Archivos'}
+                                        {validating ? <Loader2 size={16} className="animate-spin inline mr-2" /> : <ShieldAlert size={14} className="inline mr-2" />}
+                                        {validating ? 'Validando...' : 'Auditar Insumos'}
                                     </button>
                                 )}
                             </div>
 
-                            <div className="space-y-2">
-                                {[
-                                    { label: 'Carpeta Predial Asociada', ok: true },
-                                    { label: 'Evidencia Fotográfica', ok: true },
-                                    { label: 'Archivo KML Generado', ok: !!selectedAviso.longitud_decimal }
-                                ].map((step, i) => (
-                                    <div key={i} className={`flex items-center justify-between p-4 rounded-xl border ${step.ok ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400' : 'bg-slate-900/50 border-slate-800 text-slate-500'}`}>
-                                        <span className="text-sm font-medium">{step.label}</span>
-                                        {step.ok ? <CheckCircle2 size={18} /> : <span className="text-xs">Falta</span>}
+                            {valResult && (
+                                <div className={`mt-6 p-6 rounded-2xl border ${valResult.kml_status?.status === 'OK' ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-rose-500/10 border-rose-500/20'}`}>
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <ShieldAlert size={20} className={valResult.kml_status?.status === 'OK' ? 'text-emerald-400' : 'text-rose-400'} />
+                                        <h4 className="text-sm font-bold uppercase tracking-widest text-white">Resultado Auditoría Espacial</h4>
                                     </div>
-                                ))}
-                            </div>
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <div>
+                                            <p className="text-[10px] uppercase text-slate-500 font-black mb-1">Estado Proximidad</p>
+                                            <p className={`text-lg font-black ${valResult.kml_status?.status === 'OK' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                {valResult.kml_status?.status === 'OK' ? 'DENTRO DEL BUFFER' : 'FUERA DE RANGO'}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] uppercase text-slate-500 font-black mb-1">Distancia Mínima</p>
+                                            <p className="text-lg font-black text-white">{valResult.kml_status?.min_distance_m} m</p>
+                                        </div>
+                                        <div className="col-span-2">
+                                            <p className="text-[10px] uppercase text-slate-500 font-black mb-1">Diagnóstico</p>
+                                            <p className="text-sm text-slate-300">
+                                                {valResult.kml_status?.status === 'OK'
+                                                    ? 'El KML cumple con la normativa de distancia técnica para el tipo de gestión asignado.'
+                                                    : `Error: El levantamiento está a ${valResult.kml_status?.min_distance_m}m. El límite permitido es ${valResult.kml_status?.buffer_limit_m}m.`}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -487,7 +510,7 @@ const AvisoDetail: React.FC = () => {
                 )}
 
             </div>
-        </div>
+        </div >
     );
 };
 

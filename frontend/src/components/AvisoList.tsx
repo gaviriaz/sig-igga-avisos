@@ -54,10 +54,17 @@ const AvisoList: React.FC = () => {
                                             'bg-indigo-500/20 text-indigo-400'
                                         }`}>
                                         {(a.estado_workflow_interno || '').includes('Aprobado') ? <CheckCircle2 size={10} /> :
-                                            (a.estado_workflow_interno || '').includes('VALIDAR') ? <Clock size={10} /> :
+                                            (a.estado_sla === 'VENCIDO' || a.risk_score > 80) ? <AlertCircle size={10} className="text-rose-400 animate-pulse" /> :
                                                 <Zap size={10} />}
                                     </div>
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em]">{a.estado_workflow_interno || 'INGRESADO'}</span>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-black text-slate-200 uppercase tracking-[0.1em]">{a.estado_workflow_interno || 'INGRESADO'}</span>
+                                        {a.estado_sla && (
+                                            <span className={`text-[8px] font-bold uppercase ${a.estado_sla === 'VENCIDO' ? 'text-rose-500' : 'text-slate-500'}`}>
+                                                SLA: {a.estado_sla}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {a.tipo_de_gestion && (
