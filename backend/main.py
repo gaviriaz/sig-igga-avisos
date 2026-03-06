@@ -31,7 +31,7 @@ from database.models import Base
 #  FASTAPI APP 
 app = FastAPI(title="SIG IGGA/ISA - Gestion Integral de Avisos v7.5")
 
-ALLOWED = os.environ.get("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000").split(",")
+ALLOWED = os.environ.get("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,https://sig-igga.pages.dev").split(",")
 
 app.add_middleware(
     CORSMiddleware,
