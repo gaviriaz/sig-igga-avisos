@@ -6,6 +6,7 @@ import {
     AlertTriangle, CheckCircle2, Cloud, Database,
     FileText, HelpCircle, HardDrive, Network
 } from 'lucide-react';
+import { getApiUrl } from '../config/api';
 
 const NOCCommand: React.FC = () => {
     const navigate = useNavigate();
@@ -13,12 +14,20 @@ const NOCCommand: React.FC = () => {
     const [uptime, setUptime] = useState('99.982%');
     const [latency, setLatency] = useState('14ms');
     const [scannedFiles, setScannedFiles] = useState(12405);
+    const [dynamicGateway, setDynamicGateway] = useState('Fetching...');
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date().toLocaleTimeString()), 1000);
         const dataEffect = setInterval(() => {
             setScannedFiles(prev => prev + Math.floor(Math.random() * 5));
         }, 3000);
+
+        const fetchGateway = async () => {
+            const url = await getApiUrl();
+            setDynamicGateway(url.replace('https://', '').replace('.trycloudflare.com', ''));
+        };
+        fetchGateway();
+
         return () => {
             clearInterval(timer);
             clearInterval(dataEffect);
@@ -30,6 +39,13 @@ const NOCCommand: React.FC = () => {
         { label: 'GIS Render Engine', status: 'Nominal', value: 99.95, color: 'text-indigo-400' },
         { label: 'Auth Multi-Tenant', status: 'Stable', value: 100, color: 'text-primary' },
         { label: 'Database Sync', status: 'Active', value: 99.98, color: 'text-amber-500' }
+    ];
+
+    const topStats = [
+        { label: 'Security Protocols', value: 'ISO 27001 / SOC2', icon: Shield, color: 'text-primary', sub: 'Compliance Verified' },
+        { label: 'Cloud Sync Engine', value: 'Active Gateway', icon: Cloud, color: 'text-indigo-400', sub: 'L1-L3 Support Ready' },
+        { label: 'Data Encryption', value: 'RSA 4096 / AES', icon: Lock, color: 'text-rose-500', sub: 'Multi-Tenant Isolation' },
+        { label: 'Cloud Gateway', value: dynamicGateway, icon: Globe, color: 'text-primary', sub: 'trycloudflare.com' }
     ];
 
     return (
@@ -85,12 +101,7 @@ const NOCCommand: React.FC = () => {
 
                     {/* Top Stats Row */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {[
-                            { label: 'Security Protocols', value: 'ISO 27001 / SOC2', icon: Shield, color: 'text-primary', sub: 'Compliance Verified' },
-                            { label: 'Cloud Sync Engine', value: 'Active Gateway', icon: Cloud, color: 'text-indigo-400', sub: 'L1-L3 Support Ready' },
-                            { label: 'Data Encryption', value: 'RSA 4096 / AES', icon: Lock, color: 'text-rose-500', sub: 'Multi-Tenant Isolation' },
-                            { label: 'Cloud Gateway', value: 'strategy-acute-advertiser-rated', icon: Globe, color: 'text-primary', sub: 'trycloudflare.com' }
-                        ].map((stat, i) => (
+                        {topStats.map((stat, i) => (
                             <div key={i} className="glass p-6 rounded-[2rem] border-white/5 hover:border-white/10 transition-all group overflow-hidden relative">
                                 <div className="absolute -right-4 -top-4 opacity-5 group-hover:rotate-12 transition-transform">
                                     <stat.icon size={100} />
@@ -221,7 +232,7 @@ const NOCCommand: React.FC = () => {
                                     {[
                                         { label: 'Cloud Provider', val: 'HYBRID NODE / $0 COST' },
                                         { label: 'OS Build', val: 'LINUX IGGA-DEB 12.0' },
-                                        { label: 'Public Gateway', val: 'https://strategy-acute-advertiser-rated.trycloudflare.com' },
+                                        { label: 'Public Gateway', val: `https://${dynamicGateway}.trycloudflare.com` },
                                         { label: 'Auth Store', val: 'SUPABASE POSTGRES' }
                                     ].map(spec => (
                                         <div key={spec.label}>

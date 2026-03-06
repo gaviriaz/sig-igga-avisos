@@ -157,6 +157,7 @@ class SystemUser(Base):
     email          = Column(String)
     role           = Column(String, default='Gestor de Campo')   # RBAC
     zona_ejecutora = Column(String)                              # Territorio asignado
+    cedula         = Column(String)                              # ID Document
     activo         = Column(Boolean, default=True)
     created_at     = Column(DateTime, default=datetime.utcnow)
     updated_at     = Column(DateTime, onupdate=datetime.utcnow)

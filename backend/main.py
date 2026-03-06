@@ -154,17 +154,17 @@ def seed_database(db: Session = Depends(get_db)):
     from database.models import SystemUser
     if db.query(SystemUser).count() == 0:
         usuarios_base = [
-            SystemUser(username="agaviria",       full_name="Albert Gaviria",              email="agaviria@igga.com.co",     role="Administrador",             zona_ejecutora="NACIONAL"),
-            SystemUser(username="admin",          full_name="Administrador Sistema",       email="admin@igga.com.co",        role="Administrador",             zona_ejecutora=None),
-            SystemUser(username="coord_senior",   full_name="Coordinador Predial Senior",  email="coord.senior@igga.com.co", role="Coordinador Predial Senior", zona_ejecutora="NACIONAL"),
-            SystemUser(username="coord_junior",   full_name="Coordinador Predial Junior",  email="coord.junior@igga.com.co", role="Coordinador Predial Junior", zona_ejecutora="NACIONAL"),
-            SystemUser(username="analista_amb",   full_name="Analista Ambiental",          email="analista.amb@igga.com.co", role="Analista Ambiental",         zona_ejecutora="NACIONAL"),
-            SystemUser(username="oficina_1",      full_name="Operador Oficina 1",          email="oficina1@igga.com.co",     role="Oficina",                    zona_ejecutora=None),
-            SystemUser(username="oficina_2",      full_name="Operador Oficina 2",          email="oficina2@igga.com.co",     role="Oficina",                    zona_ejecutora=None),
-            SystemUser(username="gestor_campo_1", full_name="Gestor de Campo Norte",       email="campo1@igga.com.co",       role="Gestor de Campo",            zona_ejecutora="NORTE"),
-            SystemUser(username="gestor_campo_2", full_name="Gestor de Campo Sur",         email="campo2@igga.com.co",       role="Gestor de Campo",            zona_ejecutora="SUR"),
-            SystemUser(username="gestor_campo_3", full_name="Gestor de Campo Occidente",   email="campo3@igga.com.co",       role="Gestor de Campo",            zona_ejecutora="OCCIDENTE"),
-            SystemUser(username="asistente_pred", full_name="Asistente Predial",           email="asist.pred@igga.com.co",   role="Asistente Predial",          zona_ejecutora="NACIONAL"),
+            SystemUser(username="agaviria",       full_name="Albert Gaviria",              email="agaviria@igga.com.co",     role="Administrador",             zona_ejecutora="NACIONAL", cedula="1007533510"),
+            SystemUser(username="admin",          full_name="Administrador Sistema",       email="admin@igga.com.co",        role="Administrador",             zona_ejecutora=None,       cedula="0001"),
+            SystemUser(username="coord_senior",   full_name="Coordinador Predial Senior",  email="coord.senior@igga.com.co", role="Coordinador Predial Senior", zona_ejecutora="NACIONAL", cedula="0002"),
+            SystemUser(username="coord_junior",   full_name="Coordinador Predial Junior",  email="coord.junior@igga.com.co", role="Coordinador Predial Junior", zona_ejecutora="NACIONAL", cedula="0003"),
+            SystemUser(username="analista_amb",   full_name="Analista Ambiental",          email="analista.amb@igga.com.co", role="Analista Ambiental",         zona_ejecutora="NACIONAL", cedula="0004"),
+            SystemUser(username="oficina_1",      full_name="Operador Oficina 1",          email="oficina1@igga.com.co",     role="Oficina",                    zona_ejecutora=None,       cedula="0005"),
+            SystemUser(username="oficina_2",      full_name="Operador Oficina 2",          email="oficina2@igga.com.co",     role="Oficina",                    zona_ejecutora=None,       cedula="0006"),
+            SystemUser(username="gestor_campo_1", full_name="Gestor de Campo Norte",       email="campo1@igga.com.co",       role="Gestor de Campo",            zona_ejecutora="NORTE",    cedula="0007"),
+            SystemUser(username="gestor_campo_2", full_name="Gestor de Campo Sur",         email="campo2@igga.com.co",       role="Gestor de Campo",            zona_ejecutora="SUR",      cedula="0008"),
+            SystemUser(username="gestor_campo_3", full_name="Gestor de Campo Occidente",   email="campo3@igga.com.co",       role="Gestor de Campo",            zona_ejecutora="OCCIDENTE",cedula="0009"),
+            SystemUser(username="asistente_pred", full_name="Asistente Predial",           email="asist.pred@igga.com.co",   role="Asistente Predial",          zona_ejecutora="NACIONAL", cedula="0010"),
         ]
         for u in usuarios_base:
             db.add(u)
