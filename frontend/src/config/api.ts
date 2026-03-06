@@ -18,24 +18,24 @@ export const getApiUrl = async () => {
         return 'http://localhost:8000';
     }
 
-    // 3. Intento de Auto-Descubrimiento vía Supabase Bridge
-    try {
-        const { data, error } = await supabase
-            .from('system_config')
-            .select('value')
-            .eq('key', 'gateway_url')
-            .single();
+    // 3. PRIORIDAD ALTA: Render (Nuestro nuevo estándar)
+    const renderUrl = 'https://sig-igga-avisos.onrender.com';
 
-        if (data && data.value) {
-            console.log('📡 Auto-Discovery: Pointing to', data.value);
+    // Opcional: Podríamos validar si Render responde antes de regresarlo, 
+    // pero para arreglar el error del usuario ahora mismo lo daremos como primario:
+    return renderUrl;
+
+    /* 
+    // Mantenemos esto comentado por si en el futuro queremos volver a descubrimiento vía DB, 
+    // pero ahora mismo la DB tiene un link de Cloudflare viejo:
+    try {
+        const { data } = await supabase.from('system_config').select('value').eq('key', 'gateway_url').single();
+        if (data && data.value && !data.value.includes('cloudflare')) { 
             return data.value;
         }
-    } catch (e) {
-        console.warn('Auto-Discovery failed, using generic fallback.');
-    }
-
-    // Si todo falla, priorizamos el backend en la nube (Render)
-    return 'https://sig-igga-avisos.onrender.com';
+    } catch (e) { }
+    return renderUrl;
+    */
 };
 
 // Mantenemos la constante para compatibilidad, pero marcada como legacy
