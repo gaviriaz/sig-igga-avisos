@@ -59,7 +59,8 @@ const Home: React.FC = () => {
                             { name: 'Infraestructura', path: '/infraestructura' },
                             { name: 'Sistemas GIS', path: '/sistemas-gis' },
                             { name: 'Ciberseguridad', path: '/ciberseguridad' },
-                            { name: 'Protocolos', path: '/protocolos' }
+                            { name: 'Protocolos', path: '/protocolos' },
+                            { name: 'Logística', path: '/logistica' }
                         ].map((item) => (
                             <button
                                 key={item.name}
@@ -295,10 +296,19 @@ const Home: React.FC = () => {
                         <div>
                             <h4 className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-400 mb-10 border-b border-white/5 pb-4">Despliegues</h4>
                             <ul className="space-y-6 text-xs font-bold text-slate-600">
-                                {['Terminal GIS v7.8', 'Auditoría Predial', 'SLA Analytics', 'Cloud Sync Gateway'].map(li => (
-                                    <li key={li} className="hover:text-primary transition-colors cursor-pointer group flex items-center gap-2 italic uppercase">
+                                {[
+                                    { name: 'Terminal GIS OS', path: '/sistemas-gis' },
+                                    { name: 'Auditoría Predial', path: '/infraestructura' },
+                                    { name: 'Logística Táctica', path: '/logistica' },
+                                    { name: 'NOC Command', path: '/noc-command' }
+                                ].map(item => (
+                                    <li
+                                        key={item.name}
+                                        onClick={() => navigate(item.path)}
+                                        className="hover:text-primary transition-colors cursor-pointer group flex items-center gap-2 italic uppercase"
+                                    >
                                         <ChevronRight size={12} className="opacity-0 group-hover:opacity-100 transition-all -ml-4 group-hover:ml-0" />
-                                        {li}
+                                        {item.name}
                                     </li>
                                 ))}
                             </ul>

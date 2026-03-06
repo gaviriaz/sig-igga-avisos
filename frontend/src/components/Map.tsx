@@ -16,7 +16,7 @@ import Feature from 'ol/Feature';
 import Geometry from 'ol/geom/Geometry';
 import { useAvisoStore, Aviso } from '../store/useAvisoStore';
 import { useMapStore } from '../store/useMapStore';
-import { API_URL } from '../config/api';
+import { getApiUrl } from '../config/api';
 
 interface MapProps {
     onMapReady?: (map: OLMap) => void;
@@ -73,7 +73,8 @@ const Map: React.FC<MapProps> = ({ onMapReady }) => {
 
         try {
             console.log(`📡 Iniciando descarga diferida: ${layerKey}...`);
-            const resp = await fetch(`${API_URL}/capas/${filename}`);
+            const baseUrl = await getApiUrl();
+            const resp = await fetch(`${baseUrl}/capas/${filename}`);
             if (resp.ok) {
                 const geojsonData = await resp.json();
                 const format = new GeoJSON();
@@ -262,13 +263,23 @@ const Map: React.FC<MapProps> = ({ onMapReady }) => {
         mapRef.current = map;
         if (onMapReady) onMapReady(map);
 
-        // 🛠️ SENIOR MASTER FIX: Forzar actualización de tamaño tras renderizado
+        // 🛠️ SENIOR MASTER FIX: Observer de Resposividad para el Contenedor
+        const resizeObserver = new ResizeObserver(() => {
+            if (mapRef.current) {
+                mapRef.current.updateSize();
+            }
+        });
+
+        if (mapElement.current) {
+            resizeObserver.observe(mapElement.current);
+        }
+
         setTimeout(() => map.updateSize(), 100);
-        setTimeout(() => map.updateSize(), 500);
 
         Object.entries(layersVisible).forEach(([k, v]) => { if (v && k !== 'avisos') loadLayerData(k); });
 
         return () => {
+            resizeObserver.disconnect();
             map.setTarget(undefined);
             mapRef.current = null;
         };

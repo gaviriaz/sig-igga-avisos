@@ -35,7 +35,7 @@ import NotificationCenter from '../components/NotificationCenter';
 import SettingsPanel from '../components/SettingsPanel';
 import { useAvisoStore } from '../store/useAvisoStore';
 import { useAuthStore } from '../store/useAuthStore';
-import { API_URL } from '../config/api';
+import { getApiUrl } from '../config/api';
 
 type DashboardTab = 'operations' | 'analytics' | 'settings' | 'users';
 
@@ -81,7 +81,8 @@ const Dashboard: React.FC = () => {
     const fetchAvisos = async () => {
         setLoading(true);
         try {
-            const response = await fetch(`${API_URL}/avisos`);
+            const baseUrl = await getApiUrl();
+            const response = await fetch(`${baseUrl}/avisos`);
             if (response.ok) {
                 const data = await response.json();
                 setAvisos(data);
@@ -105,7 +106,8 @@ const Dashboard: React.FC = () => {
     const handleSync = async () => {
         setIsSyncing(true);
         try {
-            const resp = await fetch(`${API_URL}/etl/sync`, { method: 'POST' });
+            const baseUrl = await getApiUrl();
+            const resp = await fetch(`${baseUrl}/etl/sync`, { method: 'POST' });
             if (resp.ok) {
                 alert("✅ Sincronización SharePoint Exitosa");
                 await fetchAvisos();
@@ -123,7 +125,8 @@ const Dashboard: React.FC = () => {
     const handleSeed = async () => {
         setIsSeeding(true);
         try {
-            const resp = await fetch(`${API_URL}/dev/seed`, { method: 'POST' });
+            const baseUrl = await getApiUrl();
+            const resp = await fetch(`${baseUrl}/dev/seed`, { method: 'POST' });
             if (resp.ok) {
                 alert("✅ Datos Inyectados con Éxito");
                 await fetchAvisos();
@@ -138,7 +141,8 @@ const Dashboard: React.FC = () => {
     const handleCorteMaestro = async () => {
         setIsSyncing(true);
         try {
-            const resp = await fetch(`${API_URL}/etl/sync-geam`, {
+            const baseUrl = await getApiUrl();
+            const resp = await fetch(`${baseUrl}/etl/sync-geam`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: profile?.email })
@@ -166,7 +170,8 @@ const Dashboard: React.FC = () => {
         formData.append('file', file);
 
         try {
-            const resp = await fetch(`${API_URL}/etl/upload-geam?email=${profile?.email}`, {
+            const baseUrl = await getApiUrl();
+            const resp = await fetch(`${baseUrl}/etl/upload-geam?email=${profile?.email}`, {
                 method: 'POST',
                 body: formData
             });

@@ -2,20 +2,23 @@ param (
     [string]$Port = "8000"
 )
 
-Write-Host "🚀 Iniciando Dynamic Gateway Link (Zero Cost Tier)..." -ForegroundColor Cyan
+# Configuración de Supabase (Bridge de Autodescubrimiento)
+$SB_URL = "https://vdzfamjklmwlptitxvvd.supabase.co"
+$SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkemZhbWprbG13bHB0aXR4dnZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0NjMwMDYsImV4cCI6MjA4ODAzOTAwNn0.vTgeIcQK8beqhV8gpGjDFXM2sHZEE0c90yYDptMAjVo"
+
+Write-Host "[SYSTEM] Iniciando Dynamic Gateway Link (Auto-Discovery Mode)..." -ForegroundColor Cyan
 
 # 1. Iniciar cloudflared tunnel y capturar la salida
-# Usamos un archivo temporal para leer la URL generada
 $tempFile = Join-Path $PSScriptRoot "tunnel_log.tmp"
 if (Test-Path $tempFile) { Remove-Item $tempFile }
 
-Write-Host "📡 Solicitando túnel rápido a Cloudflare..." -ForegroundColor Yellow
+Write-Host "[LOGS] Solicitando tunel rapido a Cloudflare..." -ForegroundColor Yellow
 
-# Iniciamos el túnel en segundo plano
+# Iniciamos el tunel en segundo plano
 $process = Start-Process -FilePath "$PSScriptRoot\tools\cloudflared.exe" -ArgumentList "tunnel", "--url", "http://localhost:$Port" -NoNewWindow -PassThru -RedirectStandardError $tempFile
 
 try {
-    Write-Host "⏳ Esperando URL de Cloudflare..." -ForegroundColor Gray
+    Write-Host "[WAIT] Esperando URL de Cloudflare..." -ForegroundColor Gray
     $tunnelUrl = ""
     $timeout = 30 # segundos
     $elapsed = 0
@@ -32,21 +35,44 @@ try {
     }
 
     if ($tunnelUrl) {
-        Write-Host "`n✅ ¡Túnel Activo!" -ForegroundColor Green
-        Write-Host "🔗 URL Global: " -NoNewline
-        Write-Host $tunnelUrl -ForegroundColor White -BackgroundColor DarkBlue
-        Write-Host "`n📱 Puedes acceder desde cualquier lugar del mundo." -ForegroundColor Gray
+        Write-Host "`n[OK] ¡Tunel Activo!" -ForegroundColor Green
+        Write-Host "Link Global: $tunnelUrl" -ForegroundColor White -BackgroundColor DarkBlue
         
-        # Guardar la URL en un archivo que el frontend pueda consultar si fuera necesario
-        # O simplemente mostrarla para que el usuario sepa qué poner en sus pruebas
+        # 🚀 2. SUBIDA AUTOMÁTICA A SUPABASE
+        Write-Host "[SYNC] Sincronizando nueva puerta de enlace con Supabase..." -ForegroundColor Cyan
+        
+        $headers = @{
+            "apikey" = $SB_KEY
+            "Authorization" = "Bearer $SB_KEY"
+            "Content-Type" = "application/json"
+            "Prefer" = "resolution=merge"
+        }
+        
+        $body = @{
+            "key" = "gateway_url"
+            "value" = $tunnelUrl
+            "updated_at" = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+        } | ConvertTo-Json
+
+        try {
+            # Intentamos upsert (insertar o actualizar)
+            Invoke-RestMethod -Uri "$SB_URL/rest/v1/system_config" -Method Post -Headers $headers -Body $body -ErrorAction Stop
+            Write-Host "[SUCCESS] Cloud-Discovery actualizado. El frontend te encontrara solo." -ForegroundColor Green
+        } catch {
+            Write-Host "[RETRY] Intentando actualizacion vía PATCH..." -ForegroundColor Gray
+            Invoke-RestMethod -Uri "$SB_URL/rest/v1/system_config?key=eq.gateway_url" -Method Patch -Headers $headers -Body $body
+            Write-Host "[SUCCESS] Cloud-Discovery actualizado vía PATCH." -ForegroundColor Green
+        }
+
+        # Guardar localmente también
         $tunnelUrl | Out-File (Join-Path $PSScriptRoot "active_tunnel_url.txt")
         
-        Write-Host "`n💡 Presiona CTRL+C para cerrar el túnel." -ForegroundColor DarkGray
+        Write-Host "`n[INFO] El sistema esta operando en modo manos libres." -ForegroundColor Gray
+        Write-Host "[CTRL+C] para cerrar el tunel." -ForegroundColor DarkGray
         
-        # Mantener el proceso vivo hasta que se cierre la terminal
         $process.WaitForExit()
     } else {
-        Write-Error "❌ No se pudo capturar la URL del túnel. Revisa la conexión."
+        Write-Error "[FAIL] No se pudo capturar la URL del tunel. Revisa la conexion."
     }
 }
 finally {
