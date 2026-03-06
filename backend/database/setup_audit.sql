@@ -29,14 +29,14 @@ ALTER TABLE aviso ADD COLUMN IF NOT EXISTS assigned_to_name TEXT;
 ALTER TABLE aviso
 ADD COLUMN IF NOT EXISTS not_presente_en_corte BOOLEAN DEFAULT FALSE;
 
--- 0.1 CORREGIR TIPOS DE DATOS EN HISTORIAL
+-- 0.1 CORREGIR TIPOS DE DATOS EN HISTORIAL (Forzar TEXT para permitir IDs de sistema)
 DO $$ 
 BEGIN
     IF EXISTS (
         SELECT 1 FROM information_schema.columns 
         WHERE table_name = 'aviso_historial' AND column_name = 'usuario_id' AND data_type = 'uuid'
     ) THEN
-        ALTER TABLE aviso_historial ALTER COLUMN usuario_id TYPE TEXT;
+        ALTER TABLE aviso_historial ALTER COLUMN usuario_id TYPE TEXT USING usuario_id::text;
     END IF;
 END $$;
 
