@@ -87,10 +87,19 @@ class Aviso(Base):
     tipo_aviso = Column(String)
     batch_id_actual = Column(String)
     risk_score = Column(Integer, default=0)
+    estado_sla = Column(String, default='NORMAL')                # NORMAL, POR_VENCER, VENCIDO
     flag_intervencion_franja = Column(Boolean, default=False)
     distancia_estructura = Column(Float)
     riesgo_cimentacion = Column(String)
+    
+    # Módulo de Insumos (OneDrive integration)
     ruta_insumos_onedrive = Column(String)
+    estado_insumos = Column(String, default='NO_CREADO')         # NO_CREADO, CREADO, INCOMPLETO, COMPLETO
+    fecha_creacion_carpeta = Column(DateTime)
+    usuario_creacion_carpeta = Column(String)
+    fecha_envio_insumos = Column(DateTime)
+    usuario_envio_insumos = Column(String)
+    
     assigned_to = Column(String)                                 # Username del Gestor
     assigned_to_name = Column(String)                            # Nombre completo del Gestor
     not_presente_en_corte = Column(Boolean, default=False)
@@ -111,6 +120,37 @@ class AvisoHistorial(Base):
     comentario = Column(Text)
     batch_id = Column(String)
 
+class AvisoInsumo(Base):
+    """Resultados de validación técnica de KML e Insumos."""
+    __tablename__ = 'aviso_insumos'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    aviso_id = Column(String, ForeignKey('aviso.aviso'))
+    kml_files_count = Column(Integer, default=0)
+    kml_parse_ok = Column(Boolean, default=False)
+    kml_feature_count = Column(Integer, default=0)
+    kml_valid_geom_count = Column(Integer, default=0)
+    kml_geom_types = Column(JSON)                                # Lista de tipos: ["Point", "Line"]
+    kml_within_buffer = Column(Boolean, default=False)
+    kml_min_distance_m = Column(Float)
+    kml_buffer_used_m = Column(Integer)
+    kml_proximity_status = Column(String, default='NOT_EVALUATED') # OK, OUT_OF_BUFFER, NOT_EVALUATED
+    checklist_insumos = Column(JSON)                             # {"PREDIAL": true, "INVENTARIO": false...}
+    observaciones_insumos = Column(Text)
+    ultima_valid_insumos = Column(DateTime, default=datetime.utcnow)
+    detalle_valid_json = Column(JSON)
+
+class AvisoEvidencia(Base):
+    """Fotos, Actas, Documentos de retorno de campo."""
+    __tablename__ = 'aviso_evidencia'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    aviso_id = Column(String, ForeignKey('aviso.aviso'))
+    tipo_evidencia = Column(String)                              # FOTO, ACTA, MANUAL, KML_RECORRIDO
+    url_cloud = Column(String)
+    nombre_archivo = Column(String)
+    usuario = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    metadata_json = Column(JSON)
+
 class Dominio(Base):
     __tablename__ = 'dominio'
     id = Column(Integer, primary_key=True)
@@ -118,9 +158,24 @@ class Dominio(Base):
     tipo = Column(String, index=True)
     valor = Column(String)
     descripcion = Column(String)
-    # Temporalmente comentamos activo si no existe en la DB
-    # activo = Column(Boolean, default=True)
+    activo = Column(Boolean, default=True)
 
+class CfgKmlBuffer(Base):
+    """Configuración de buffers por tipo de gestión."""
+    __tablename__ = 'cfg_kml_buffer_por_tipo_gestion'
+    tipo_gestion = Column(String, primary_key=True)
+    buffer_m = Column(Integer, nullable=False)
+    activo = Column(Boolean, default=True)
+    updated_at = Column(DateTime, onupdate=datetime.utcnow)
+
+class CfgKmlValidacion(Base):
+    """Reglas globales de validación KML."""
+    __tablename__ = 'cfg_kml_validacion'
+    id = Column(Integer, primary_key=True)
+    min_valid_geometries = Column(Integer, default=1)
+    require_within_buffer = Column(Boolean, default=True)
+    allowed_geom_types = Column(JSON)                            # Default: ["Point", "LineString"...]
+    updated_at = Column(DateTime, onupdate=datetime.utcnow)
 
 class Notificacion(Base):
     __tablename__ = 'notificacion'
@@ -149,7 +204,6 @@ class UserPreference(Base):
     notificaciones_email = Column(Boolean, default=True)
     config_json = Column(JSON)
     updated_at = Column(DateTime, onupdate=datetime.utcnow)
-
 
 class SystemUser(Base):
     __tablename__ = 'app_system_user'
