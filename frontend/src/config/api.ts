@@ -6,13 +6,20 @@ const meta = (import.meta as any);
 let currentApiUrl = 'http://localhost:8000';
 
 export const getApiUrl = async () => {
-    // Si ya estamos en localhost, no buscamos en la nube
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return currentApiUrl;
+    // 1. PRIORIDAD MÁXIMA: Si viene por URL en GitHub Pages (ej: ?apiUrl=http://localhost:8000)
+    const urlParams = new URLSearchParams(window.location.search);
+    const queryUrl = urlParams.get('apiUrl');
+    if (queryUrl) {
+        return queryUrl;
     }
 
+    // 2. Si estamos en desarrollo/local o hay un fallo de red
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:8000';
+    }
+
+    // 3. Intento de Auto-Descubrimiento vía Supabase Bridge
     try {
-        // Intento de Auto-Descubrimiento vía Supabase Bridge
         const { data, error } = await supabase
             .from('system_config')
             .select('value')
@@ -21,13 +28,14 @@ export const getApiUrl = async () => {
 
         if (data && data.value) {
             console.log('📡 Auto-Discovery: Pointing to', data.value);
-            currentApiUrl = data.value;
+            return data.value;
         }
     } catch (e) {
-        console.warn('Auto-Discovery failed, using fallback.');
+        console.warn('Auto-Discovery failed, using generic fallback.');
     }
 
-    return currentApiUrl;
+    // Si todo falla, asumimos que el backend corre localmente
+    return 'http://localhost:8000';
 };
 
 // Mantenemos la constante para compatibilidad, pero marcada como legacy
