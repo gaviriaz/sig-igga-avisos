@@ -91,6 +91,7 @@ class Aviso(Base):
     distancia_estructura = Column(Float)
     riesgo_cimentacion = Column(String)
     ruta_insumos_onedrive = Column(String)
+    assigned_to = Column(String)                                 # Gestor de Campo asignado
     not_presente_en_corte = Column(Boolean, default=False)
     fecha_ultimo_corte_visto = Column(DateTime)
     created_at = Column(DateTime, default=datetime.utcnow)

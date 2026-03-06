@@ -220,6 +220,11 @@ def list_avisos(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/users")
+def get_users_list(db: Session = Depends(get_db)):
+    """Alias para /users/all usado por el frontend."""
+    return list_users(db)
+
 @app.get("/avisos/{aviso_id}")
 def get_aviso(aviso_id: str, db: Session = Depends(get_db)):
     from database.models import Aviso
@@ -231,6 +236,29 @@ def get_aviso(aviso_id: str, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.patch("/avisos/{aviso_id}")
+async def patch_aviso(aviso_id: str, request: Request, db: Session = Depends(get_db)):
+    """Endpoint genrico para actualizar campos de un aviso (como asignacin de gestor)."""
+    from database.models import Aviso
+    try:
+        payload = await request.json()
+        aviso = db.query(Aviso).filter(Aviso.aviso == aviso_id).first()
+        if not aviso:
+            raise HTTPException(status_code=404, detail="Aviso no encontrado")
+        
+        # Actualizacion dinamica de campos permitidos
+        allowed_fields = [c.name for c in aviso.__table__.columns]
+        for key, value in payload.items():
+            if key in allowed_fields:
+                setattr(aviso, key, value)
+        
+        db.commit()
+        db.refresh(aviso)
+        return row_to_dict(aviso)
+    except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
 

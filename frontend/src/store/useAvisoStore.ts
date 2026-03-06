@@ -65,6 +65,8 @@ export interface Aviso {
 
     ruta_insumos_onedrive?: string;
     not_presente_en_corte?: boolean;
+    assigned_to?: string;
+    assigned_to_name?: string;
     risk_score: number;
     deadline_sla?: string;
     estado_sla?: string;

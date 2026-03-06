@@ -22,7 +22,7 @@ import {
     Users,
     ChevronRight,
     ChevronLeft,
-    Truck
+    Footprints
 } from 'lucide-react';
 
 import Logistica from './Logistica';
@@ -207,7 +207,7 @@ const Dashboard: React.FC = () => {
     // RBAC: Menú dinámico según el rol
     const menuItems = [
         { id: 'operations', icon: MapIcon, label: 'Operaciones', roles: ['Oficina', 'Analista Ambiental', 'Coordinador Predial Junior', 'Coordinador Predial Senior'] },
-        { id: 'logistics', icon: Truck, label: 'Logística', roles: ['Oficina', 'Coordinador Predial Senior', 'Analista Ambiental'] },
+        { id: 'logistics', icon: Footprints, label: 'Centro de Programación', roles: ['Oficina', 'Coordinador Predial Senior', 'Analista Ambiental', 'Gestor de Campo'] },
         { id: 'analytics', icon: BarChart3, label: 'Estadísticas', roles: ['Oficina', 'Coordinador Predial Senior'] },
         { id: 'users', icon: Users, label: 'Usuarios', roles: ['Oficina'] },
         { id: 'settings', icon: Settings, label: 'Catálogos', roles: ['Oficina', 'Coordinador Predial Senior'] },

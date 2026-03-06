@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
 
-export type UserRole = 'Oficina' | 'Analista Ambiental' | 'Coordinador Predial Junior' | 'Coordinador Predial Senior';
+export type UserRole = 'Oficina' | 'Analista Ambiental' | 'Coordinador Predial Junior' | 'Coordinador Predial Senior' | 'Gestor de Campo' | 'Asistente Predial' | 'Administrador';
 
 interface AuthState {
     user: User | null;
@@ -10,6 +10,7 @@ interface AuthState {
         role: UserRole;
         full_name: string;
         email?: string;
+        username?: string;
     } | null;
     loading: boolean;
     initialized: boolean;
@@ -38,7 +39,8 @@ export const useAuthStore = create<AuthState>((set) => ({
             profile: {
                 role: profile?.role || 'Oficina',
                 full_name: profile?.full_name || user.user_metadata?.full_name || 'Usuario',
-                email: user.email
+                email: user.email,
+                username: user.email?.split('@')[0]
             },
             loading: false
         });
@@ -65,7 +67,8 @@ export const useAuthStore = create<AuthState>((set) => ({
                     profile: {
                         role: profile?.role || 'Oficina',
                         full_name: profile?.full_name || session.user.user_metadata?.full_name || 'Usuario',
-                        email: session.user.email
+                        email: session.user.email,
+                        username: session.user.email?.split('@')[0]
                     },
                     initialized: true,
                     loading: false
