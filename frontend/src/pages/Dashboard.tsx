@@ -43,7 +43,7 @@ import { getApiUrl } from '../config/api';
 type DashboardTab = 'operations' | 'analytics' | 'settings' | 'users' | 'logistics';
 
 const Dashboard: React.FC = () => {
-    const { avisos, setAvisos, setLoading, filterAvisos } = useAvisoStore();
+    const { avisos, setAvisos, setLoading, filterAvisos, subscribeRealtime } = useAvisoStore();
     const { profile, signOut, initialize } = useAuthStore();
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [currentTab, setCurrentTab] = useState<DashboardTab>('operations');
@@ -60,6 +60,9 @@ const Dashboard: React.FC = () => {
 
     useEffect(() => {
         initialize();
+
+        // Suscribirse a cambios en tiempo real
+        const unsubscribe = subscribeRealtime();
 
         // Handle deep-linking to sections
         const section = searchParams.get('section');
@@ -79,6 +82,10 @@ const Dashboard: React.FC = () => {
                     break;
             }
         }
+
+        return () => {
+            unsubscribe();
+        };
     }, [searchParams]);
 
     const fetchAvisos = async () => {
@@ -193,10 +200,42 @@ const Dashboard: React.FC = () => {
     };
 
     const stats = [
-        { label: 'Críticos', value: avisos.filter(a => a.risk_score > 75).length, icon: AlertTriangle, color: 'text-rose-500', bg: 'bg-rose-500/10' },
-        { label: 'Pendientes QA', value: avisos.filter(a => (a.estado_workflow_interno || '').includes('VALIDAR')).length, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-        { label: 'Aprobados', value: avisos.filter(a => (a.estado_workflow_interno || '').includes('Aprobado')).length, icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-        { label: 'SLA OK', value: `${avisos.length > 0 ? Math.round((avisos.filter(a => a.risk_score < 75).length / avisos.length) * 100) : 100}%`, icon: BarChart3, color: 'text-indigo-500', bg: 'bg-indigo-500/10' }
+        {
+            label: 'Críticos',
+            value: avisos.filter(a => a.risk_score > 75).length,
+            icon: AlertTriangle,
+            color: 'text-rose-500',
+            bg: 'bg-rose-500/10',
+            glow: 'shadow-rose-500/20',
+            accent: 'bg-rose-500'
+        },
+        {
+            label: 'Pendientes QA',
+            value: avisos.filter(a => (a.estado_workflow_interno || '').includes('VALIDAR')).length,
+            icon: Clock,
+            color: 'text-amber-500',
+            bg: 'bg-amber-500/10',
+            glow: 'shadow-amber-500/20',
+            accent: 'bg-amber-500'
+        },
+        {
+            label: 'Aprobados',
+            value: avisos.filter(a => (a.estado_workflow_interno || '').includes('Aprobado')).length,
+            icon: CheckCircle2,
+            color: 'text-emerald-500',
+            bg: 'bg-emerald-500/10',
+            glow: 'shadow-emerald-500/20',
+            accent: 'bg-emerald-500'
+        },
+        {
+            label: 'SLA OK',
+            value: `${avisos.length > 0 ? Math.round((avisos.filter(a => a.risk_score < 75).length / avisos.length) * 100) : 100}%`,
+            icon: BarChart3,
+            color: 'text-indigo-500',
+            bg: 'bg-indigo-500/10',
+            glow: 'shadow-indigo-500/20',
+            accent: 'bg-indigo-500'
+        }
     ];
 
     const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -360,19 +399,35 @@ const Dashboard: React.FC = () => {
                 {/* 🛠️ Contenido Dinámico */}
                 {currentTab === 'operations' ? (
                     <>
-                        <section className="grid grid-cols-4 gap-6 p-8 bg-slate-950/20 shrink-0">
+                        <section className="grid grid-cols-4 gap-6 p-8 bg-slate-950/10 shrink-0">
                             {stats.map((stat, idx) => (
-                                <div key={idx} className="glass p-5 rounded-3xl hover:border-white/20 transition-all group hover:-translate-y-1 relative overflow-hidden">
-                                    <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                                        <stat.icon size={48} />
-                                    </div>
-                                    <div className="flex items-center justify-between mb-2">
-                                        <div className={`p-2.5 ${stat.bg} ${stat.color} rounded-2xl shadow-inner relative z-10`}>
-                                            <stat.icon size={20} />
+                                <div key={idx} className={`glass p-6 rounded-[2.5rem] transition-all duration-500 group hover:-translate-y-2 hover:border-white/20 relative overflow-hidden flex flex-col justify-between hover:shadow-2xl ${stat.glow}`}>
+                                    {/* ✨ Ambient Aura */}
+                                    <div className={`absolute -right-8 -top-8 w-32 h-32 ${stat.accent} opacity-0 group-hover:opacity-10 blur-[50px] transition-opacity duration-500`} />
+
+                                    <div className="flex items-center justify-between mb-4 relative z-10">
+                                        <div className={`p-3 ${stat.bg} ${stat.color} rounded-2xl shadow-inner group-hover:scale-110 transition-transform duration-500`}>
+                                            <stat.icon size={22} className="group-hover:animate-pulse-glow" />
+                                        </div>
+                                        <div className="absolute -top-4 -right-4 p-2 opacity-5 group-hover:opacity-20 transition-all duration-700 group-hover:rotate-12 group-hover:scale-150">
+                                            <stat.icon size={80} className="animate-float" />
                                         </div>
                                     </div>
-                                    <p className="text-2xl font-black text-white tracking-tight relative z-10">{stat.value}</p>
-                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest relative z-10">{stat.label}</p>
+
+                                    <div className="relative z-10 mt-auto">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <p className="text-4xl font-black text-white tracking-tighter group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-slate-500 transition-all duration-500">
+                                                {stat.value}
+                                            </p>
+                                            <div className={`h-1.5 w-0 group-hover:w-8 ${stat.accent} rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(255,255,255,0.2)]`} />
+                                        </div>
+                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] group-hover:text-white transition-colors duration-500">
+                                            {stat.label}
+                                        </p>
+                                    </div>
+
+                                    {/* 💎 Glass Shine Effect */}
+                                    <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.05] to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none" />
                                 </div>
                             ))}
                         </section>

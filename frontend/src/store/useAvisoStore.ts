@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { supabase } from '../lib/supabase';
 
 export interface Aviso {
     aviso: string;
@@ -84,9 +85,10 @@ interface AvisoState {
     filterAvisos: (term: string) => void;
     setLoading: (loading: boolean) => void;
     updateAviso: (avisoId: string, updates: Partial<Aviso>) => void;
+    subscribeRealtime: () => () => void;
 }
 
-export const useAvisoStore = create<AvisoState>((set) => ({
+export const useAvisoStore = create<AvisoState>((set, get) => ({
     avisos: [],
     selectedAviso: null,
     filteredAvisos: [],
@@ -95,6 +97,46 @@ export const useAvisoStore = create<AvisoState>((set) => ({
     setAvisos: (avisos) => set({ avisos, filteredAvisos: avisos }),
     selectAviso: (aviso) => set({ selectedAviso: aviso }),
     setLoading: (loading) => set({ isLoading: loading }),
+
+    subscribeRealtime: () => {
+        const channel = supabase
+            .channel('db-aviso-changes')
+            .on('postgres_changes',
+                { event: '*', schema: 'public', table: 'aviso' },
+                (payload) => {
+                    console.log('📡 Realtime Change:', payload);
+                    const { eventType, new: newRecord, old: oldRecord } = payload;
+
+                    const currentAvisos = get().avisos;
+
+                    if (eventType === 'INSERT') {
+                        const updated = [newRecord as Aviso, ...currentAvisos];
+                        set({ avisos: updated, filteredAvisos: updated });
+                    } else if (eventType === 'UPDATE') {
+                        const updated = currentAvisos.map(a =>
+                            a.aviso === newRecord.aviso ? { ...a, ...newRecord } : a
+                        );
+                        const newSelected = get().selectedAviso?.aviso === newRecord.aviso
+                            ? { ...get().selectedAviso, ...newRecord } as Aviso
+                            : get().selectedAviso;
+
+                        set({
+                            avisos: updated,
+                            filteredAvisos: updated,
+                            selectedAviso: newSelected
+                        });
+                    } else if (eventType === 'DELETE') {
+                        const updated = currentAvisos.filter(a => a.aviso !== oldRecord.aviso);
+                        set({ avisos: updated, filteredAvisos: updated });
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    },
 
     filterAvisos: (term) => set((state) => ({
         filteredAvisos: state.avisos.filter(a =>
