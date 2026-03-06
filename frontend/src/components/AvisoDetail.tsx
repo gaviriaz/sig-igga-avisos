@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAvisoStore } from '../store/useAvisoStore';
 import { useAuthStore } from '../store/useAuthStore';
-import { API_URL } from '../config/api';
+import { getApiUrl } from '../config/api';
 import {
     Zap, MapPin, Loader2, AlertTriangle, CheckCircle2, Clock,
     FolderKanban, Sparkles, History, Info, MessageSquare, Send,
@@ -29,10 +29,17 @@ const AvisoDetail: React.FC = () => {
     const [isSending, setIsSending] = useState(false);
 
     useEffect(() => {
-        fetch(`${API_URL}/domains/workflow_status`)
-            .then(res => res.json())
-            .then(data => setWorkflowStates(data))
-            .catch(e => console.error("Error loading workflow states"));
+        const loadDomains = async () => {
+            try {
+                const baseUrl = await getApiUrl();
+                const res = await fetch(`${baseUrl}/domains/workflow_status`);
+                const data = await res.json();
+                setWorkflowStates(data);
+            } catch (e) {
+                console.error("Error loading workflow states");
+            }
+        };
+        loadDomains();
     }, []);
 
     useEffect(() => {
@@ -41,17 +48,22 @@ const AvisoDetail: React.FC = () => {
         setLoadingAi(true);
         setCurrentTab('resumen');
 
-        fetch(`${API_URL}/avisos/${selectedAviso.aviso}/ai-insight`)
-            .then(res => res.json())
-            .then(data => setAiInsight(data))
-            .catch(e => console.error(e))
-            .finally(() => setLoadingAi(false));
+        const loadAvisoData = async () => {
+            const baseUrl = await getApiUrl();
 
-        fetch(`${API_URL}/avisos/${selectedAviso.aviso}/history`)
-            .then(res => res.json())
-            .then(data => setHistorial(data))
-            .catch(e => console.error(e));
+            fetch(`${baseUrl}/avisos/${selectedAviso.aviso}/ai-insight`)
+                .then(res => res.json())
+                .then(data => setAiInsight(data))
+                .catch(e => console.error(e))
+                .finally(() => setLoadingAi(false));
 
+            fetch(`${baseUrl}/avisos/${selectedAviso.aviso}/history`)
+                .then(res => res.json())
+                .then(data => setHistorial(data))
+                .catch(e => console.error(e));
+        };
+
+        loadAvisoData();
         fetchComments();
     }, [selectedAviso]);
 
@@ -59,12 +71,13 @@ const AvisoDetail: React.FC = () => {
         if (!selectedAviso) return;
         setIsUpdating(true);
         try {
-            const res = await fetch(`${API_URL}/avisos/${selectedAviso.aviso}/state?new_state=${newState}`, {
+            const baseUrl = await getApiUrl();
+            const res = await fetch(`${baseUrl}/avisos/${selectedAviso.aviso}/state?new_state=${newState}`, {
                 method: 'PATCH'
             });
             if (res.ok) {
                 updateAviso(selectedAviso.aviso, { estado_workflow_interno: newState, tipo_status: newState });
-                const hRes = await fetch(`${API_URL}/avisos/${selectedAviso.aviso}/history`);
+                const hRes = await fetch(`${baseUrl}/avisos/${selectedAviso.aviso}/history`);
                 const hData = await hRes.json();
                 setHistorial(hData);
             }
@@ -78,7 +91,8 @@ const AvisoDetail: React.FC = () => {
     const fetchComments = async () => {
         if (!selectedAviso) return;
         try {
-            const res = await fetch(`${API_URL}/avisos/${selectedAviso.aviso}/comments`);
+            const baseUrl = await getApiUrl();
+            const res = await fetch(`${baseUrl}/avisos/${selectedAviso.aviso}/comments`);
             const data = await res.json();
             setComments(data);
         } catch (e) {
@@ -98,7 +112,8 @@ const AvisoDetail: React.FC = () => {
         if (!newComment.trim() || !selectedAviso) return;
         setIsSending(true);
         try {
-            const res = await fetch(`${API_URL}/avisos/${selectedAviso.aviso}/comments`, {
+            const baseUrl = await getApiUrl();
+            const res = await fetch(`${baseUrl}/avisos/${selectedAviso.aviso}/comments`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -121,7 +136,8 @@ const AvisoDetail: React.FC = () => {
         if (!selectedAviso) return;
         setValidating(true);
         try {
-            const res = await fetch(`${API_URL}/avisos/${selectedAviso.aviso}/validate-insumos`, { method: 'POST' });
+            const baseUrl = await getApiUrl();
+            const res = await fetch(`${baseUrl}/avisos/${selectedAviso.aviso}/validate-insumos`, { method: 'POST' });
             const data = await res.json();
             setValResult(data);
         } catch (e) {

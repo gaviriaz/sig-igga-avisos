@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, X, Moon, Sun, Monitor, Bell, Shield, Zap, Palette, Loader2, Save } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
-import { API_URL } from '../config/api';
+import { getApiUrl } from '../config/api';
 
 const SettingsPanel: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
     const { profile } = useAuthStore();
@@ -12,7 +12,8 @@ const SettingsPanel: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isO
     const fetchPrefs = async () => {
         setLoading(true);
         try {
-            const res = await fetch(`${API_URL}/preferences`);
+            const baseUrl = await getApiUrl();
+            const res = await fetch(`${baseUrl}/preferences`);
             const data = await res.json();
             setPreferences(data);
         } catch (e) {
@@ -25,7 +26,8 @@ const SettingsPanel: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isO
     const handleSave = async () => {
         setSaving(true);
         try {
-            await fetch(`${API_URL}/preferences`, {
+            const baseUrl = await getApiUrl();
+            await fetch(`${baseUrl}/preferences`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(preferences)

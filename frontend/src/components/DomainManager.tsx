@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Database, Plus, Trash2, Save, ChevronRight, Loader2 } from 'lucide-react';
-import { API_URL } from '../config/api';
+import { getApiUrl } from '../config/api';
 
 const DomainManager: React.FC = () => {
     const [activeDomain, setActiveDomain] = useState('workflow_status');
@@ -15,7 +15,8 @@ const DomainManager: React.FC = () => {
     const fetchValues = async () => {
         setLoading(true);
         try {
-            const resp = await fetch(`${API_URL}/domains/${activeDomain}`);
+            const baseUrl = await getApiUrl();
+            const resp = await fetch(`${baseUrl}/domains/${activeDomain}`);
             if (resp.ok) {
                 const data = await resp.json();
                 setValues(data);
@@ -37,7 +38,8 @@ const DomainManager: React.FC = () => {
         if (!val || !lab) return;
 
         try {
-            const resp = await fetch(`${API_URL}/domains`, {
+            const baseUrl = await getApiUrl();
+            const resp = await fetch(`${baseUrl}/domains`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ domain_key: activeDomain, value: val, label: lab })

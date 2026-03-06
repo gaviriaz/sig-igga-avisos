@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, X, Info, AlertTriangle, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
-import { API_URL } from '../config/api';
+import { getApiUrl } from '../config/api';
 
 interface Notificacion {
     id: number;
@@ -20,7 +20,8 @@ const NotificationCenter: React.FC<{ isOpen: boolean; onClose: () => void }> = (
     const fetchNotifications = async () => {
         setLoading(true);
         try {
-            const res = await fetch(`${API_URL}/notifications`);
+            const baseUrl = await getApiUrl();
+            const res = await fetch(`${baseUrl}/notifications`);
             const data = await res.json();
             setNotifications(data);
         } catch (e) {
@@ -32,7 +33,8 @@ const NotificationCenter: React.FC<{ isOpen: boolean; onClose: () => void }> = (
 
     const markAsRead = async (id: number) => {
         try {
-            await fetch(`${API_URL}/notifications/${id}/read`, { method: 'PATCH' });
+            const baseUrl = await getApiUrl();
+            await fetch(`${baseUrl}/notifications/${id}/read`, { method: 'PATCH' });
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, leida: true } : n));
         } catch (e) {
             console.error(e);
